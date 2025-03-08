@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package todo;
+// option go_package ="github.com/valdimir-makarov/Go-backend-Engineering/Todo-Service";
+
+option go_package = "./proto";
+// Define the service
+service TodoService {
+    // Create a new to-do item
+    rpc CreateTodo (CreateTodoRequest) returns (CreateTodoResponse);
+
+    // Get a specific to-do item by ID
+    rpc GetTodo (GetTodoRequest) returns (GetTodoResponse);
+
+    // List all to-do items
+    rpc ListTodos (ListTodosRequest) returns (ListTodosResponse);
+
+    // Update an existing to-do item
+    rpc UpdateTodo (UpdateTodoRequest) returns (UpdateTodoResponse);
+
+    // Delete a to-do item by ID
+    rpc DeleteTodo (DeleteTodoRequest) returns (DeleteTodoResponse);
+}
+
+// Define the message structures
+
+// Request and response for CreateTodo
+message CreateTodoRequest {
+    string title = 1;       // Title of the to-do item
+    string description = 2; // Optional description of the to-do item
+}
+
+message CreateTodoResponse {
+    int32 id = 1;           // Unique ID of the created to-do item
+    string title = 2;       // Title of the created to-do item
+    string description = 3; // Description of the created to-do item
+    bool completed = 4;     // Completion status (default: false)
+}
+
+// Request and response for GetTodo
+message GetTodoRequest {
+    int32 id = 1;           // ID of the to-do item to retrieve
+}
+
+message GetTodoResponse {
+    int32 id = 1;           // ID of the retrieved to-do item
+    string title = 2;       // Title of the retrieved to-do item
+    string description = 3; // Description of the retrieved to-do item
+    bool completed = 4;     // Completion status
+}
+
+// Request and response for ListTodos
+message ListTodosRequest {}
+
+message ListTodosResponse {
+    repeated TodoItem todos = 1; // List of all to-do items
+}
+
+// Request and response for UpdateTodo
+message UpdateTodoRequest {
+    int32 id = 1;           // ID of the to-do item to update
+    string title = 2;       // Updated title (optional)
+    string description = 3; // Updated description (optional)
+    bool completed = 4;     // Updated completion status (optional)
+}
+
+message UpdateTodoResponse {
+    int32 id = 1;           // ID of the updated to-do item
+    string title = 2;       // Updated title
+    string description = 3; // Updated description
+    bool completed = 4;     // Updated completion status
+}
+
+// Request and response for DeleteTodo
+message DeleteTodoRequest {
+    int32 id = 1;           // ID of the to-do item to delete
+}
+
+message DeleteTodoResponse {
+    bool success = 1;       // Indicates whether the deletion was successful
+    string message = 2;     // Optional message (e.g., "Deleted successfully")
+}
+
+// Common structure for a to-do item
+message TodoItem {
+    int64 id = 1;           // Unique ID of the to-do item
+    string title = 2;       // Title of the to-do item
+    string description = 3; // Description of the to-do item
+    bool completed = 4;     // Completion status
+}
