@@ -10,14 +10,39 @@ import (
 	"fmt"
 )
 
-// CreateTodo is the resolver for the createTodo field.
-func (r *mutationResolver) CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: CreateTodo - createTodo"))
+// CreateJob is the resolver for the createJob field.
+func (r *mutationResolver) CreateJob(ctx context.Context, input model.CreateJobInput) (*model.Job, error) {
+	panic(fmt.Errorf("not implemented: CreateJob - createJob"))
 }
 
-// Todos is the resolver for the todos field.
-func (r *queryResolver) Todos(ctx context.Context) ([]*model.Todo, error) {
-	panic(fmt.Errorf("not implemented: Todos - todos"))
+// UpdateJob is the resolver for the updateJob field.
+func (r *mutationResolver) UpdateJob(ctx context.Context, id string, input model.UpdateJobInput) (*model.Job, error) {
+	panic(fmt.Errorf("not implemented: UpdateJob - updateJob"))
+}
+
+// DeleteJob is the resolver for the deleteJob field.
+func (r *mutationResolver) DeleteJob(ctx context.Context, id string) (*model.Job, error) {
+	panic(fmt.Errorf("not implemented: DeleteJob - deleteJob"))
+}
+
+// Jobs is the resolver for the jobs field.
+func (r *queryResolver) Jobs(ctx context.Context) ([]*model.Job, error) {
+	panic(fmt.Errorf("not implemented: Jobs - jobs"))
+}
+
+// Job is the resolver for the job field.
+func (r *queryResolver) Job(ctx context.Context, id string) (*model.Job, error) {
+	panic(fmt.Errorf("not implemented: Job - job"))
+}
+
+// Companies is the resolver for the companies field.
+func (r *queryResolver) Companies(ctx context.Context) ([]*model.Company, error) {
+	panic(fmt.Errorf("not implemented: Companies - companies"))
+}
+
+// Company is the resolver for the company field.
+func (r *queryResolver) Company(ctx context.Context, id string) (*model.Company, error) {
+	panic(fmt.Errorf("not implemented: Company - company"))
 }
 
 // Mutation returns MutationResolver implementation.

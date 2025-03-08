@@ -2,27 +2,42 @@
 #
 # https://gqlgen.com/getting-started/
 
-type Todo {
+type Job {
   id: ID!
-  text: String!
-  done: Boolean!
-  user: User!
+  title: String!
+  description: String!
+  company: Company!
+  datePosted: String!
 }
 
-type User {
+type Company {
   id: ID!
   name: String!
+  description: String
+  jobs: [Job!]!
 }
 
 type Query {
-  todos: [Todo!]!
+  jobs: [Job!]!
+  job(id: ID!): Job
+  companies: [Company!]!
+  company(id: ID!): Company
 }
 
-input NewTodo {
-  text: String!
-  userId: String!
+input CreateJobInput {
+  title: String!
+  description: String!
+  companyId: ID!
+}
+
+input UpdateJobInput {
+  title: String
+  description: String
 }
 
 type Mutation {
-  createTodo(input: NewTodo!): Todo!
+  createJob(input: CreateJobInput!): Job!
+  updateJob(id: ID!, input: UpdateJobInput!): Job!
+  deleteJob(id: ID!): Job!
 }
+

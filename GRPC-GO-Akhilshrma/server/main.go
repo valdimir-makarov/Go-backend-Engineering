@@ -48,7 +48,8 @@ func (s *greetServer) SayHelloServerStreaming(req *pb.NameList,
 func (s *greetServer) BiDstreaming(streamVar pb.GreetService_BiDstreamingServer) {
 	for {
 
-	}
+           
+ 	}
 }
 
 func main() {
