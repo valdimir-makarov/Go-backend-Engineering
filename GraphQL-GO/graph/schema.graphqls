@@ -1,7 +1,3 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
 type Job {
   id: ID!
   title: String!
@@ -40,4 +36,3 @@ type Mutation {
   updateJob(id: ID!, input: UpdateJobInput!): Job!
   deleteJob(id: ID!): Job!
 }
-

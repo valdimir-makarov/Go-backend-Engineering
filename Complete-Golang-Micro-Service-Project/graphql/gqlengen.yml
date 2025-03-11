@@ -1,0 +1,8 @@
+schema: schema.graphql
+
+models:
+  Account:
+    model: github.com/valdimir-makarov/Go-backend-Engineering/Complete-Golang-Micro-Service-Project/graphql.Account
+    fields:
+      orders:
+        resolver: true
