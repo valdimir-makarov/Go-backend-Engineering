@@ -5,11 +5,6 @@ import (
 	"log"
 )
 
-type Account struct {
-	ID   string
-	Name string
-}
-
 type Client struct{}
 
 // NewClient method now simply returns a placeholder client and does not use gRPC.
