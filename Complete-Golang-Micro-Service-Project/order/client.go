@@ -5,18 +5,9 @@ import (
 	"log"
 )
 
-type Order struct {
-	ID     string
-	Status string
-}
-
 type Client struct{}
 
 // NewClient method now simply returns a placeholder client and does not use gRPC.
-func NewClient(url string) (*Client, error) {
-	// Placeholder for establishing a connection, now just returning a dummy client
-	return &Client{}, nil
-}
 
 // Close method is a placeholder for closing the connection if needed
 func (c *Client) Close() {

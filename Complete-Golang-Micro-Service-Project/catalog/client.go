@@ -2,43 +2,90 @@ package catalog
 
 import (
 	"context"
-	"log"
+
+	catalog "github.com/valdimir-makarov/Go-backend-Engineering/Complete-Golang-Micro-Service-Project/catalog/pb"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
-type Product struct {
-	ID    string
-	Name  string
-	Price float64
+type Client struct {
+	conn    *grpc.ClientConn
+	service catalog.CatalogServiceClient
 }
 
-type Client struct{}
-
-// NewClient method now simply returns a placeholder client and does not use gRPC.
 func NewClient(url string) (*Client, error) {
-	// Placeholder for establishing a connection, now just returning a dummy client
-	return &Client{}, nil
+	conn, err := grpc.NewClient(url, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	c := catalog.NewCatalogServiceClient(conn)
+	return &Client{conn, c}, nil
 }
 
-// Close method is a placeholder for closing the connection if needed
 func (c *Client) Close() {
-	// Placeholder logic for closing a connection, if applicable
-	log.Println("Catalog client connection closed")
+	c.conn.Close()
 }
 
-// PostProduct method is now just a stub that logs an error message
-func (c *Client) PostProduct(ctx context.Context, name string, price float64) (*Product, error) {
-	log.Fatal("PostProduct method is not implemented")
-	return nil, nil
+func (c *Client) PostProduct(ctx context.Context, name, description string, price float64) (*Product, error) {
+	r, err := c.service.PostProduct(
+		ctx,
+		&catalog.PostProductRequest{
+			Name:        name,
+			Description: description,
+			Price:       price,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &Product{
+		ID:          r.Product.Id,
+		Name:        r.Product.Name,
+		Description: r.Product.Description,
+		Price:       r.Product.Price,
+	}, nil
 }
 
-// GetProduct method is now just a stub that logs an error message
 func (c *Client) GetProduct(ctx context.Context, id string) (*Product, error) {
-	log.Fatal("GetProduct method is not implemented")
-	return nil, nil
+	r, err := c.service.GetProduct(
+		ctx,
+		&catalog.GetProductRequest{
+			Id: id,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Product{
+		ID:          r.Product.Id,
+		Name:        r.Product.Name,
+		Description: r.Product.Description,
+		Price:       r.Product.Price,
+	}, nil
 }
 
-// GetProducts method is now just a stub that logs an error message
-func (c *Client) GetProducts(ctx context.Context, skip uint64, take uint64) ([]Product, error) {
-	log.Fatal("GetProducts method is not implemented")
-	return nil, nil
+func (c *Client) GetProducts(ctx context.Context, skip uint64, take uint64, ids []string, query string) ([]Product, error) {
+	r, err := c.service.GetProducts(
+		ctx,
+		&catalog.GetProductsRequest{
+			Ids:   ids,
+			Skip:  skip,
+			Take:  take,
+			Query: query,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	products := []Product{}
+	for _, p := range r.Products {
+		products = append(products, Product{
+			ID:          p.Id,
+			Name:        p.Name,
+			Description: p.Description,
+			Price:       p.Price,
+		})
+	}
+	return products, nil
 }
