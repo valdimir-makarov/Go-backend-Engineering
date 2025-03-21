@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"log"
 
 	"github.com/gorilla/websocket"
@@ -20,9 +21,19 @@ func WebService(repo repository.Repository) *Service {
 
 }
 
-func (s *Service) HandleConnection(conn *websocket.Conn) {
+func (s *Service) HandleConnection(conn *websocket.Conn, username string) {
 
-	s.websocketServie.AddClient(conn)
+	s.websocketServie.AddClient(conn, username)
+
+	joinMessage := map[string]string{
+
+		"username": username,
+		"content":  "A new User joined",
+		"type":     "join",
+	}
+
+	joinMessageJSON, _ := json.Marshal(joinMessage)
+	s.websocketServie.BroadcastMessage(joinMessageJSON)
 	for {
 
 		_, message, err := conn.ReadMessage()
@@ -30,7 +41,31 @@ func (s *Service) HandleConnection(conn *websocket.Conn) {
 
 			log.Fatalf("Error while Reading Message Casting Message-Service")
 		}
-		log.Println(message)
+		log.Println("hey", message)
+		chatMessage := map[string]string{
+
+			"username":     username,
+			"chatContenet": string(message),
+			"type":         "message",
+		}
+		chatMessageJSON, _ := json.Marshal(chatMessage)
+		success, err := s.websocketServie.BroadcastMessage(chatMessageJSON)
+
+		if err != nil {
+			log.Fatalf("failed broadcase in Servivce")
+			success = false
+		}
+		if success {
+
+			log.Printf("message brod casr successfully")
+		}
+		leaveMessage := map[string]string{
+			"username": username,
+			"content":  "has left the chat",
+			"type":     "leave",
+		}
+		leaveMessageJSON, _ := json.Marshal(leaveMessage)
+		s.websocketServie.BroadcastMessage(leaveMessageJSON)
 	}
 
 }

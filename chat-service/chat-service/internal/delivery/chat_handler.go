@@ -28,7 +28,11 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 		log.Println("Upgrade error:", err)
 		return
 	}
-	defer conn.Close()
 
-	h.handler.HandleConnection(conn)
+	defer conn.Close()
+	username := r.URL.Query().Get("username")
+	if username != "" {
+		username = "Anonymous"
+	}
+	h.handler.HandleConnection(conn, username)
 }

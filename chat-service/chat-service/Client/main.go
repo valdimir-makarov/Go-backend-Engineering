@@ -36,9 +36,12 @@ func main() {
 		}
 	}()
 
-	// Send messages to the server.
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	// Send "hello bubun" as soon as the connection is established.
+	err = conn.WriteMessage(websocket.TextMessage, []byte("hello bubun"))
+	if err != nil {
+		log.Fatal("Write error:", err)
+	}
+	log.Println("Sent: hello bubun")
 
 	// Handle interrupt signal (Ctrl+C).
 	interrupt := make(chan os.Signal, 1)
@@ -48,13 +51,6 @@ func main() {
 		select {
 		case <-done:
 			return
-		case t := <-ticker.C:
-			// Send a message every second.
-			err := conn.WriteMessage(websocket.TextMessage, []byte(t.String()))
-			if err != nil {
-				log.Println("Write error:", err)
-				return
-			}
 		case <-interrupt:
 			// Gracefully close the connection.
 			log.Println("Interrupt received, closing connection...")
