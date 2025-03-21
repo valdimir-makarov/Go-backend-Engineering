@@ -26,6 +26,7 @@ func ListenGRPC(s Service, port int) error {
 	}
 	serv := grpc.NewServer()
 	catalog.RegisterCatalogServiceServer(serv, &grpcServer{service: s})
+
 	reflection.Register(serv)
 	return serv.Serve(lis)
 }
