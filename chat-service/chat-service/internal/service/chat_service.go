@@ -1,71 +1,73 @@
 package service
 
 import (
-	"encoding/json"
 	"log"
 
-	"github.com/gorilla/websocket"
+	"github.com/google/uuid"
+	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/models"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/repository"
+	"go.uber.org/zap"
 )
 
 type Service struct {
-	websocketServie repository.Repository
+	websocketService repository.Repository
 }
 
-// i am gonna use *Service in Return cuz its refering to struct and i want to mutate it directly
+// WebService creates a new instance of Service.
 func WebService(repo repository.Repository) *Service {
 	return &Service{
-
-		websocketServie: repo,
+		websocketService: repo,
 	}
-
 }
 
-func (s *Service) HandleConnection(conn *websocket.Conn, username string) {
+// SendMessages sends a message from the sender to the receiver.
+// If the receiver is offline, the message is saved in the database.
+func (s *Service) SendMessages(senderID, receiverID int, content string) error {
+	// Use a globally injected logger instead of initializing a new one each time
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
 
-	s.websocketServie.AddClient(conn, username)
+	// Create the message
+	id := uuid.New()
+	log.Println("Generated UUID:", id)
 
-	joinMessage := map[string]string{
+	message := models.Message{
+		ID:         uuid.New(), // Generates a valid UUID
+		SenderID:   senderID,
+		ReceiverID: receiverID,
+		Content:    content,
 
-		"username": username,
-		"content":  "A new User joined",
-		"type":     "join",
+		Delivered: false,
 	}
 
-	joinMessageJSON, _ := json.Marshal(joinMessage)
-	s.websocketServie.BroadcastMessage(joinMessageJSON)
-	for {
+	// Log message details
+	logger.Info("Saving message",
+		zap.String("id", message.ID.String()),
+		zap.Int("sender_id", message.SenderID),
+		zap.Int("receiver_id", message.ReceiverID),
+		zap.String("content", message.Content),
+	)
 
-		_, message, err := conn.ReadMessage()
-		if err != nil {
-
-			log.Fatalf("Error while Reading Message Casting Message-Service")
-		}
-		log.Println("hey", message)
-		chatMessage := map[string]string{
-
-			"username":     username,
-			"chatContenet": string(message),
-			"type":         "message",
-		}
-		chatMessageJSON, _ := json.Marshal(chatMessage)
-		success, err := s.websocketServie.BroadcastMessage(chatMessageJSON)
-
-		if err != nil {
-			log.Fatalf("failed broadcase in Servivce")
-			success = false
-		}
-		if success {
-
-			log.Printf("message brod casr successfully")
-		}
-		leaveMessage := map[string]string{
-			"username": username,
-			"content":  "has left the chat",
-			"type":     "leave",
-		}
-		leaveMessageJSON, _ := json.Marshal(leaveMessage)
-		s.websocketServie.BroadcastMessage(leaveMessageJSON)
+	// Save the message to the database
+	if err := s.websocketService.SaveMessage(message); err != nil {
+		logger.Error("Failed to save message", zap.Error(err))
+		return err
 	}
 
+	logger.Info("Message saved successfully", zap.String("id", message.ID.String()))
+	return nil
+}
+
+// GetPendingMessages retrieves all undelivered messages for a receiver.
+func (s *Service) GetPendingMessages(receiverID int) ([]models.Message, error) {
+	messages, err := s.websocketService.GetUndeliveredMessages(receiverID)
+	if err != nil {
+		return nil, err
+	}
+	return messages, nil
+}
+
+// MarkMessagesDelivered marks all undelivered messages for a receiver as delivered.
+func (s *Service) MarkMessagesDelivered(receiverID int) {
+	s.websocketService.MarkMessageAsDelivered(receiverID)
 }

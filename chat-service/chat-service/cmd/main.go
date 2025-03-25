@@ -12,14 +12,15 @@ import (
 
 func main() {
 	// Initialize the repository, service, and handler.
-	repo := repository.NewWebSocketRepo()
-	service := service.WebService(repo)
-	wsHandler := handler.NewWebSocketHandler(service)
 
+	repo := repository.NewWebSocketRepo()
+	srv := service.WebService(repo)
+	wsHandler := handler.NewWebSocketHandler(srv)
+	log.Println("WebSocket connection attemptbububububububububububub")
 	// Register the WebSocket handler.
 	http.HandleFunc("/ws", wsHandler.HandleWebSocket)
 
 	// Start the HTTP server.
-	fmt.Println("WebSocket server started at :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	fmt.Println("WebSocket server started at :8081")
+	log.Fatal(http.ListenAndServe(":8081", nil))
 }

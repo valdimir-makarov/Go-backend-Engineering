@@ -1,0 +1,16 @@
+{
+    "workbench.editor.scrollToSwitchTabs": false,
+    "workbench.editor.pinnedTabsOnSeparateRow": true,
+    "editor.useTabStops": true,
+    "editor.detectIndentation": false,
+    "workbench.statusBar.visible": false,
+    "workbench.view.alwaysShowHeaderActions": false,
+    "workbench.view.showQuietly": {
+        "workbench.panel.output": false
+    },
+    "workbench.editor.closeEmptyGroups": true,
+    "workbench.editor.enablePreviewFromCodeNavigation": false,
+    "workbench.editor.languageDetection": false,
+    "workbench.editor.limit.enabled": false,
+    "workbench.editor.showTabs": "multiple"
+}
