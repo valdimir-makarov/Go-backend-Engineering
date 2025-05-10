@@ -1,27 +1,24 @@
-# Use the correct Go version
-FROM golang:1.21.3 AS builder
+# --- Builder Stage ---
+    FROM golang:1.23-bullseye AS builder
 
-# Set the working directory inside the container
-WORKDIR /app
-
-# Copy Go module files first (for caching)
-COPY go.mod go.sum ./
-RUN go mod download
-
-# Copy the entire project
-COPY . .
-
-# Statically compile the Go application
-RUN CGO_ENABLED=0 GOOS=linux go build -o chat-service ./cmd/main.go
-
-# Use a minimal base image
-FROM alpine:latest
-
-# Set the working directory
-WORKDIR /app
-
-# Copy the compiled binary from the builder stage
-COPY --from=builder /app/chat-service .
-
-# Run the application
-CMD ["./chat-service"]
+    WORKDIR /app
+    
+    COPY go.mod go.sum ./
+    RUN go mod download
+    
+    COPY . .
+    
+    # Verify main.go exists and build
+    RUN test -f cmd/main.go || (echo "cmd/main.go not found" && exit 1)
+    RUN GOOS=linux GOARCH=amd64 go build -o chat-service ./cmd
+    
+    # --- Final Stage ---
+    FROM debian:bullseye-slim
+    
+    WORKDIR /app
+    
+    RUN apt-get update && apt-get install -y ca-certificates netcat && rm -rf /var/lib/apt/lists/*
+    
+    COPY --from=builder /app/chat-service .
+    
+    CMD ["./chat-service"]

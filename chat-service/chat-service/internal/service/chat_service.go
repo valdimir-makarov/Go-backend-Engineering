@@ -68,6 +68,8 @@ func (s *Service) GetPendingMessages(receiverID int) ([]models.Message, error) {
 }
 
 // MarkMessagesDelivered marks all undelivered messages for a receiver as delivered.
-func (s *Service) MarkMessagesDelivered(receiverID int) {
-	s.websocketService.MarkMessageAsDelivered(receiverID)
+func (s *Service) MarkMessagesDelivered(messageIDs []uuid.UUID) {
+	for _, msgID := range messageIDs {
+		s.websocketService.MarkMessageAsDelivered(msgID)
+	}
 }

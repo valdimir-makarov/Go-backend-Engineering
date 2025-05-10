@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/models"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/service"
 )
@@ -21,12 +23,13 @@ var clients = make(map[int]*websocket.Conn) // Maps user ID (as int) to WebSocke
 var lock = sync.RWMutex{}
 
 type WebSocketHandler struct {
-	handler *service.Service
+	handler        *service.Service
+	kafka_producer *kafka.KafkaProducer
 }
 
 // NewWebSocketHandler creates a new instance of WebSocketHandler.
-func NewWebSocketHandler(service *service.Service) *WebSocketHandler {
-	return &WebSocketHandler{handler: service}
+func NewWebSocketHandler(service *service.Service, producer *kafka.KafkaProducer) *WebSocketHandler {
+	return &WebSocketHandler{handler: service, kafka_producer: producer}
 }
 
 // Helper functions for managing clients
@@ -39,34 +42,67 @@ func (h *WebSocketHandler) addClient(userID int, conn *websocket.Conn) {
 	lock.Unlock()
 	//fetching undelivered messgaes
 
+	// pendingMessages, err := h.handler.GetPendingMessages(userID)
+	// if err != nil {
+
+	// 	log.Fatalf("Error While Getting the Pending Messages")
+
+	// }
+
+	// Fetch undelivered messages
 	pendingMessages, err := h.handler.GetPendingMessages(userID)
 	if err != nil {
-
-		log.Fatalf("Error While Getting the Pending Messages")
-
+		log.Printf("Error while getting pending messages: %v", err)
+		return
 	}
-	//sending the Undilevered messages to the Reconnected Client
-	var messagesIDs []int
-	for msg := range pendingMessages {
 
+	// var messageIDs []uuid.UUID
+	// for _, msg := range pendingMessages {
+	// 	err := conn.WriteJSON(msg)
+	// 	if err != nil {
+	// 		log.Printf("Error sending message to user %d: %v", userID, err)
+	// 		continue
+	// 	}
+	// 	messageIDs = append(messageIDs, msg.ID)
+	// }
+	// Send undelivered messages
+	var messagesIDs []uuid.UUID
+	for _, msg := range pendingMessages { // Fix: Iterate correctly
 		err := conn.WriteJSON(msg)
 		if err != nil {
-
-			log.Printf("Error Sending Messages")
+			log.Printf("Error sending messages to user %d: %v", userID, err)
 			continue
 		}
-		messagesIDs = append(messagesIDs, msg)
+		messagesIDs = append(messagesIDs, msg.ID) // Fix: Store message IDs correctly
 	}
 
+	// Mark messages as delivered
 	if len(messagesIDs) > 0 {
-		for _, msg := range messagesIDs {
-
-			h.handler.MarkMessagesDelivered(msg)
-		}
-
+		h.handler.MarkMessagesDelivered(messagesIDs) // Fix: Pass correct IDs
 	}
 
 }
+
+//sending the Undilevered messages to the Reconnected Client
+// var messagesIDs []int
+// for msg := range pendingMessages {
+
+// 	err := conn.WriteJSON(msg)
+// 	if err != nil {
+
+// 		log.Printf("Error Sending Messages")
+// 		continue
+// 	}
+// 	messagesIDs = append(messagesIDs, msg)
+// }
+
+// if len(messagesIDs) > 0 {
+// 	for _, msg := range messagesIDs {
+
+// 		h.handler.MarkMessagesDelivered(msg)
+// 	}
+
+// }
 
 func removeClient(userID int) {
 	lock.Lock()
@@ -159,6 +195,14 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 		} else {
 			// Save message for later delivery if receiver is not connected
 			err := h.handler.SendMessages(message.SenderID, message.ReceiverID, message.Content)
+			h.kafka_producer.PublishMessage(models.Message{
+				ID:         uuid.New(),
+				SenderID:   message.SenderID,
+				ReceiverID: message.ReceiverID,
+				Content:    message.Content,
+				Delivered:  false,
+			})
+
 			if err != nil {
 				log.Printf("Error saving message for user %d: %v\n", message.ReceiverID, err)
 				break

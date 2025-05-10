@@ -9,6 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+
+	"github.com/lib/pq"
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/sirupsen/logrus"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/config"
@@ -21,7 +23,7 @@ type Repository interface {
 	GetUsername(conn *websocket.Conn) string
 	BroadcastMessage(message []byte) (bool, error)
 	SaveMessage(msg models.Message) error
-	MarkMessageAsDelivered(receiverID int)
+	MarkMessageAsDelivered(receiverID uuid.UUID)
 	GetUndeliveredMessages(receiverID int) ([]models.Message, error)
 }
 
@@ -161,9 +163,24 @@ func (r *WebSocketRepository) GetUndeliveredMessages(receiverID int) ([]models.M
 }
 
 // MarkMessageAsDelivered marks messages as delivered for a receiver.
-func (r *WebSocketRepository) MarkMessageAsDelivered(receiverID int) {
-	_, err := r.Db.Exec("UPDATE messages SET delivered = true WHERE receiver_id = $1", receiverID)
-	if err != nil {
-		log.Printf("Error marking messages as delivered: %v\n", err)
+func (r *WebSocketRepository) MarkMessagesDelivered(messageIDs []uuid.UUID) error {
+	if len(messageIDs) == 0 {
+		return nil
 	}
+
+	_, err := r.Db.Exec("UPDATE messages SET delivered = true WHERE id = ANY($1)", pq.Array(messageIDs))
+	if err != nil {
+		log.Printf("Error marking messages as delivered: %v", err)
+	}
+	return err
+}
+
+// MarkMessageAsDelivered updates messages as delivered for a specific receiver.
+func (r *WebSocketRepository) MarkMessageAsDelivered(receiverID uuid.UUID) {
+	_, err := r.Db.Exec("UPDATE messages SET delivered = true WHERE receiver_id = $1 AND delivered = false", receiverID)
+	if err != nil {
+		log.Printf("Error marking messages as delivered for receiver %s: %v", receiverID, err)
+
+	}
+
 }

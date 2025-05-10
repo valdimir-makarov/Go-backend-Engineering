@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/ws", RawQuery: "user_id=123"}
+	u := url.URL{Scheme: "ws", Host: "localhost:8081", Path: "/ws", RawQuery: "user_id=123"}
 	log.Printf("Connecting to %s", u.String())
 
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
