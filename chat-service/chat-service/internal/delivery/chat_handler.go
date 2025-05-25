@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka"
+	authkafka "github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka/Auth_kafka"
+
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/models"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/service"
 )
@@ -23,13 +25,14 @@ var clients = make(map[int]*websocket.Conn) // Maps user ID (as int) to WebSocke
 var lock = sync.RWMutex{}
 
 type WebSocketHandler struct {
-	handler        *service.Service
-	kafka_producer *kafka.KafkaProducer
+	handler            *service.Service
+	kafka_producer     *kafka.KafkaProducer
+	kafka_producerAuth *authkafka.KafkaProducer
 }
 
 // NewWebSocketHandler creates a new instance of WebSocketHandler.
-func NewWebSocketHandler(service *service.Service, producer *kafka.KafkaProducer) *WebSocketHandler {
-	return &WebSocketHandler{handler: service, kafka_producer: producer}
+func NewWebSocketHandler(service *service.Service, producer *kafka.KafkaProducer, authProducer *authkafka.KafkaProducer) *WebSocketHandler {
+	return &WebSocketHandler{handler: service, kafka_producer: producer, kafka_producerAuth: authProducer}
 }
 
 // Helper functions for managing clients
@@ -131,6 +134,8 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 
 	// Extract user ID from query parameters
 	userId := r.URL.Query().Get("user_id")
+	h.kafka_producerAuth.SendUserStatusEvent(userId, "UserLogedIn")
+
 	if userId == "" {
 		log.Println("User ID is missing")
 		http.Error(w, "User ID is missing", http.StatusBadRequest)

@@ -1,0 +1,5 @@
+FROM node:16-slim
+WORKDIR /app
+COPY worker/js_worker.js .
+RUN npm install kafka-node
+CMD ["node", "js_worker.js"]

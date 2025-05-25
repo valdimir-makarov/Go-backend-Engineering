@@ -109,7 +109,7 @@ func (r *WebSocketRepository) BroadcastMessage(message []byte) (bool, error) {
 }
 
 // SaveMessage saves a message to the database.
-func (r *WebSocketRepository) SaveMessage(msg models.Message) error {
+func (r *WebSocketRepository)SaveMessage(msg models.Message) error {
 	// Validate sender_id and receiver_id
 	if msg.ID == uuid.Nil {
 		msg.ID = uuid.New()

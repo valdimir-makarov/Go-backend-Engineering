@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 30s
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    image: bitnami/kafka:3.5.1
+    container_name: kafka
+    ports:
+      - "9093:9093"  # Changed from 9092 to 9093
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9093  # Changed to 9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9093  # Changed to kafka:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9093 --list || exit 1"]
+      interval: 15s
+      timeout: 15s
+      retries: 40
+    volumes:
+      - kafka-data:/bitnami/kafka
+
+  go-executor:
+    build:
+      context: .
+      dockerfile: Dockerfile.go
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_BROKER=kafka:9093  # Update to match new port
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  go-executor-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.go-worker
+    environment:
+      - KAFKA_BROKER=kafka:9093  # Update to match new port
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  python-executor:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    environment:
+      - KAFKA_BROKER=kafka:9093  # Update to match new port
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  js-executor:
+    build:
+      context: .
+      dockerfile: Dockerfile.nodejs
+    environment:
+      - KAFKA_BROKER=kafka:9093  # Update to match new port
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+volumes:
+  zookeeper-data:
+  kafka-data:

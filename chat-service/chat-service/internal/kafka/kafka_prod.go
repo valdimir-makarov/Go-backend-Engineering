@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/segmentio/kafka-go"
+	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/models"
 )
 
 type KafkaProducer struct {
@@ -40,4 +41,25 @@ func (kp *KafkaProducer) PublishMessage(msg interface{}) error {
 		log.Printf("Failed to write message to Kafka: %v", err)
 	}
 	return err
+}
+
+func (kp *KafkaProducer) SendFileUpLoadEvent(userId, ReceiverID, filename string) error {
+
+	event := models.FileEvent{
+		EventType:  "File Uploaded",
+		UserId:     userId,
+		ReceiverID: ReceiverID,
+		FileName:   filename,
+	}
+	msgBytes, err := json.Marshal(event)
+	if err != nil {
+		log.Println("Failed to marshal event:", err)
+		return err
+	}
+	msg := kafka.Message{
+		Key:   []byte(userId),
+		Value: msgBytes,
+	}
+
+	return kp.Writer.WriteMessages(context.Background(), msg)
 }

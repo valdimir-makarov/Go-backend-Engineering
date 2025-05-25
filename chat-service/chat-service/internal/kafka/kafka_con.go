@@ -34,7 +34,6 @@ func StartMessageConsumer(brokers []string, topic string, repo repository.Reposi
 				continue
 			}
 
-			log.Println("Kafka consumer received message:", msg)
 			repo.SaveMessage(msg)
 		}
 	}()

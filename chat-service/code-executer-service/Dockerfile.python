@@ -1,0 +1,5 @@
+FROM python:3.9-slim
+WORKDIR /app
+COPY worker/python_worker.py .
+RUN pip install kafka-python
+CMD ["python3", "python_worker.py"]
