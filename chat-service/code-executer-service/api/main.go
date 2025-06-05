@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
+	pool "github.com/valdimir-makarov/Go-backend-Engineering/chat-service/code-executer-service/Pool"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/code-executer-service/internal/models"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/code-executer-service/lang"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/code-executer-service/pkg"
@@ -25,10 +26,11 @@ var (
 )
 
 type ExecutionService struct {
-	containers  map[string]string
-	Sanitizer   *pkg.CodeSanitizer
-	KafkaWriter *kafka.Writer
-	KafkaReader *kafka.Reader
+	containers    map[string]string
+	Sanitizer     *pkg.CodeSanitizer
+	KafkaWriter   *kafka.Writer
+	KafkaReader   *kafka.Reader
+	ContainerPool *pool.ContainerPool
 }
 
 func NewExecutionService() *ExecutionService {
@@ -51,6 +53,8 @@ func NewExecutionService() *ExecutionService {
 			MinBytes: 10e3,
 			MaxBytes: 10e6,
 		}),
+
+		ContainerPool: &pool.ContainerPool{},
 	}
 }
 
@@ -91,12 +95,14 @@ func (s *ExecutionService) HandleExe(w http.ResponseWriter, r *http.Request) err
 		json.NewEncoder(w).Encode(response)
 		return err
 	}
+	container := s.ContainerPool.GetContainer()
+	defer s.ContainerPool.ReleaseContainer(container)
 
 	sub := models.Submission{
 		ID:        r.RemoteAddr + "-" + req.Method,
 		Language:  req.Language,
 		Code:      req.Code,
-		Container: s.containers[req.Language],
+		Container: container,
 	}
 
 	data, err := json.Marshal(sub)
@@ -117,7 +123,7 @@ func (s *ExecutionService) HandleExe(w http.ResponseWriter, r *http.Request) err
 
 	logrus.Infof("Submission queued: %s", sub.ID)
 	// Poll for result with a timeout (e.g., 10 seconds)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	for {
@@ -137,17 +143,17 @@ func (s *ExecutionService) HandleExe(w http.ResponseWriter, r *http.Request) err
 			if err != nil {
 				continue
 			}
-			if string(msg.Key) == sub.ID {
-				var response models.ExecutionResponse
-				if err := json.Unmarshal(msg.Value, &response); err != nil {
-					logrus.Errorf("Failed to unmarshal result: %v", err)
-					continue
-				}
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(response)
-				return nil
+
+			var response models.ExecutionResponse
+			if err := json.Unmarshal(msg.Value, &response); err != nil {
+				logrus.Errorf("Failed to unmarshal result: %v", err)
+				continue
 			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(response)
+			return nil
+
 		}
 	}
 }

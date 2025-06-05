@@ -1,5 +1,11 @@
 package models
 
+import (
+	"context"
+
+	"github.com/segmentio/kafka-go"
+)
+
 type ExecutionRequest struct {
 	Language string `json:"language"`
 	Code     string `json:"code"`
@@ -16,4 +22,8 @@ type Submission struct {
 	Language  string
 	Code      string
 	Container string
+}
+
+type KafkaReader interface {
+	ReadMessage(ctx context.Context) (kafka.Message, error)
 }
