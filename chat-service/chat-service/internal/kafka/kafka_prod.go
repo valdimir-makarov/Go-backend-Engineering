@@ -25,7 +25,7 @@ func NewKafkaProducer(brokers []string, topic string) *KafkaProducer {
 	}
 }
 
-func (kp *KafkaProducer) PublishMessage(msg interface{}) error {
+func (kp *KafkaProducer) PublishMessage(msg any) error {
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return err
