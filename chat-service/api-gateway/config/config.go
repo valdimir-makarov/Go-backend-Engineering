@@ -1,28 +1,22 @@
 package config
 
-import (
-	"errors"
-	"os"
-)
+import "os"
 
 type Config struct {
-	ServerAddress  string
-	UserServiceURL string
+	Port           string
+	AuthServiceURL string
 }
 
-func Load() (*Config, error) {
-	addr := os.Getenv("API_GATEWAY_ADDR")
-	userSvc := os.Getenv("USER_SERVICE_URL")
-
-	if addr == "" {
-		addr = ":8080" // default port
-	}
-	if userSvc == "" {
-		return nil, errors.New("USER_SERVICE_URL not set")
-	}
-
+func Load() *Config {
 	return &Config{
-		ServerAddress:  addr,
-		UserServiceURL: userSvc,
-	}, nil
+		Port:           getEnv("GATEWAY_PORT", ":9001"),
+		AuthServiceURL: getEnv("AUTH_SERVICE_URL", "http://auth-service:8080"),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }

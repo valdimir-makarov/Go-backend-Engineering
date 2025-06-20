@@ -1,13 +1,17 @@
 package handler
 
 import (
-	"log"
+	"context"
+	"errors"
 	"net/http"
 	"strconv"
 	"sync"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/lestrrat-go/jwx/jwk"
+	"github.com/lestrrat-go/jwx/jwt"
+	log "github.com/sirupsen/logrus"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka"
 	authkafka "github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka/Auth_kafka"
 
@@ -124,6 +128,27 @@ func getClient(userID int) (*websocket.Conn, bool) {
 func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	log.Println("Attempting WebSocket upgrade")
 
+	tokenString := r.URL.Query().Get("token")
+	if tokenString == "" {
+		log.WithFields(log.Fields{
+			"service": "chat-service",
+			"message": "the token is missing",
+			"error":   errors.New("missing JWT token").Error(),
+		}).Error("Failed to process WebSocket request: missing JWT token")
+		return
+	}
+	jwks, err := jwk.Fetch(context.Background(), "http://auth-service:8080/.well-known/jwks.json")
+	if err != nil {
+		log.Println("JWKS fetch error:", err)
+		http.Error(w, "Failed to fetch JWKS", http.StatusInternalServerError)
+		return
+	}
+	parsedToken, err := jwt.Parse([]byte(tokenString), jwt.WithKeySet(jwks))
+	if err != nil {
+		log.Println("Token parse error:", err)
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
 	//this upgrades the http connection to websockets
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -134,6 +159,12 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 
 	// Extract user ID from query parameters
 	userId := r.URL.Query().Get("user_id")
+	userID, ok := parsedToken.Get("user_id")
+	log.Print(userID)
+	if !ok {
+		http.Error(w, "Invalid token: user_id missing", http.StatusUnauthorized)
+		return
+	}
 	h.kafka_producerAuth.SendUserStatusEvent(userId, "UserLogedIn")
 
 	if userId == "" {

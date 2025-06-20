@@ -15,6 +15,7 @@ import (
 
 func main() {
 	// Initialize the repository, service, and handler.
+	fmt.Println("Chat service started")
 	brokers := []string{"localhost:9092"}
 	topic := "message-sent"
 	topic_2 := "user-status-changed"

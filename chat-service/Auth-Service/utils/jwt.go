@@ -7,9 +7,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtKey = []byte("supersecretkey") // Use env variable in production!
+var jwtKey = []byte("super-secret-key") // 🔥 hardcoded secret (local dev ONLY)
 
-// Claims structure for JWT
 type Claims struct {
 	UserID uint `json:"user_id"`
 	jwt.RegisteredClaims

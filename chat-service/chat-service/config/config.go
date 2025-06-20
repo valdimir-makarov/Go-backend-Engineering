@@ -1,5 +1,7 @@
 package config
 
+import "os"
+
 // Config holds the application configuration
 type Config struct {
 	DBUser     string
@@ -11,11 +13,11 @@ type Config struct {
 
 func LoadConfig() Config {
 	return Config{
-		DBUser:     "postgres",
-		DBPassword: "postgres",
-		DBName:     "chat_db",
-		DBHost:     "localhost",
-		DBPort:     "5432",
+		DBUser:     os.Getenv("DB_USER"),
+		DBPassword: os.Getenv("DB_PASSWORD"),
+		DBName:     os.Getenv("DB_NAME"),
+		DBHost:     os.Getenv("DB_HOST"),
+		DBPort:     os.Getenv("DB_PORT"),
 	}
 }
 

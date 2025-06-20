@@ -10,8 +10,9 @@
     
     # Verify main.go exists and build
     RUN test -f cmd/main.go || (echo "cmd/main.go not found" && exit 1)
-    RUN GOOS=linux GOARCH=amd64 go build -o chat-service ./cmd
-    
+    RUN GOOS=linux GOARCH=amd64 go build -o chat-service ./cmd/main.go
+    RUN ls -lh /app/chat-service
+
     # --- Final Stage ---
     FROM debian:bullseye-slim
     

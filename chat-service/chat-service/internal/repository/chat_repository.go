@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -46,9 +47,16 @@ func NewWebSocketRepo() *WebSocketRepository {
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
 	}
-
+	for i := 0; i < 10; i++ {
+		err := db.Ping()
+		if err == nil {
+			break
+		}
+		log.Printf("Failed to ping DB: %v. Retrying...", err)
+		time.Sleep(2 * time.Second)
+	}
 	// Test the connection
-	err = db.Ping()
+
 	if err != nil {
 		log.Fatalf("Failed to ping DB: %v", err)
 	}
@@ -109,7 +117,7 @@ func (r *WebSocketRepository) BroadcastMessage(message []byte) (bool, error) {
 }
 
 // SaveMessage saves a message to the database.
-func (r *WebSocketRepository)SaveMessage(msg models.Message) error {
+func (r *WebSocketRepository) SaveMessage(msg models.Message) error {
 	// Validate sender_id and receiver_id
 	if msg.ID == uuid.Nil {
 		msg.ID = uuid.New()

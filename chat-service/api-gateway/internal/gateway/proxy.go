@@ -6,7 +6,7 @@ import (
 	"net/url"
 )
 
-func proxyToUserService(target string) http.HandlerFunc {
+func Proxy(target string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		url, err := url.Parse(target)
 		if err != nil {

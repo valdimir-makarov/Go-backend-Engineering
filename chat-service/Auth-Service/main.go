@@ -29,7 +29,7 @@ func main() {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	// Security middleware
+	// Security middlewarechat-service exited with code 1
 	r.Use(middleware.SecureHeaders())
 	r.Use(middleware.TraceRequest())
 
@@ -48,6 +48,7 @@ func main() {
 	if port == "" {
 		port = "2021"
 	}
+	config.ConnectDatabase()
 
 	log.Printf("Auth service running on port %s", port)
 	if err := r.Run(":" + port); err != nil {
