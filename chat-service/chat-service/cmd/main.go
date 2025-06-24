@@ -32,6 +32,7 @@ func main() {
 	kafkaPkg.StartMessageConsumer(brokers, topic, repo)
 	http.HandleFunc("/ws", wsHandler.HandleWebSocket)
 	http.HandleFunc("/wsfl", filehandler.SendFileHandler)
+	http.HandleFunc("/wsgrpmsg", wsHandler.HandleGroupMessages)
 	port := os.Getenv("CHAT_SERVICE_PORT")
 	if port == "" {
 		port = "3001" // fallback default

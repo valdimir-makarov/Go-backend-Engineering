@@ -325,6 +325,8 @@ services:
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
+    volumes:
+      - /home/bubun/Go-backend-Engineering/chat-service/api-gateway/config/nginx.conf:/etc/nginx/conf.d/default.conf
     ports:
       - "8088:9001"  # outside = 8088, inside = 9001
     environment:

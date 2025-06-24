@@ -73,3 +73,8 @@ func (s *Service) MarkMessagesDelivered(messageIDs []uuid.UUID) {
 		s.websocketService.MarkMessageAsDelivered(msgID)
 	}
 }
+
+// File: service/group_service.go
+func (s *Service) GetGroupMemberIDs(groupID uuid.UUID) ([]int, error) {
+	return s.websocketService.GetGroupMemberIDs(groupID)
+}

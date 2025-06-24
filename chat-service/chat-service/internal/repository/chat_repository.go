@@ -26,6 +26,7 @@ type Repository interface {
 	SaveMessage(msg models.Message) error
 	MarkMessageAsDelivered(receiverID uuid.UUID)
 	GetUndeliveredMessages(receiverID int) ([]models.Message, error)
+	GetGroupMemberIDs(groupID uuid.UUID) ([]int, error)
 }
 
 type WebSocketRepository struct {
@@ -191,4 +192,28 @@ func (r *WebSocketRepository) MarkMessageAsDelivered(receiverID uuid.UUID) {
 
 	}
 
+}
+
+// File: repository/group_repository.go
+func (r *WebSocketRepository) GetGroupMemberIDs(groupID uuid.UUID) ([]int, error) {
+	query := `
+		SELECT user_id
+		FROM group_members
+		WHERE group_id = $1
+	`
+	rows, err := r.Db.Query(query, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var userIDs []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		userIDs = append(userIDs, id)
+	}
+	return userIDs, nil
 }

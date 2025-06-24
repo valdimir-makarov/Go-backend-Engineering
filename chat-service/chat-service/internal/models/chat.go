@@ -12,11 +12,13 @@ import (
 //		Timestamp  time.Time `json:"timestamp"`
 //		Delivered  bool      `json:"delivered"`
 //	}
+
 type Message struct {
-	ID         uuid.UUID `json:"id"`
-	SenderID   int       `json:"sender_id"`
-	ReceiverID int       `json:"receiver_id"`
-	Content    string    `json:"content"`
+	ID         uuid.UUID  `json:"id"`
+	SenderID   int        `json:"sender_id"`
+	ReceiverID int        `json:"receiver_id"`
+	Content    string     `json:"content"`
+	GroupID    *uuid.UUID `json:"group_id,omitempty"` // group chat
 
 	Delivered bool `json:"delivered"`
 }
