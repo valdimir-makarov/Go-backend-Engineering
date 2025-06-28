@@ -1,0 +1,23 @@
+syntax = "proto3";
+package chat;
+option go_package = "github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/generated";
+
+service ChatService{
+     rpc SendMessage(ChatMessage) returns(empty);
+
+}
+
+
+
+   
+
+ message ChatMessage {
+  string id = 1; // UUID for message
+  int32 sender_id = 2;
+  int32 receiver_id = 3; // Used for one-to-one chat
+  string content = 4;
+  string group_id = 5; // Optional UUID for group chat
+  bool delivered = 6;
+}
+
+ message empty{}
