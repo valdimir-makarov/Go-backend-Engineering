@@ -57,6 +57,8 @@ func (h *WebSocketHandler) addClient(userID int, conn *websocket.Conn) {
 	h.sendPendingMessages(userID, conn)
 }
 
+// removeClient removes a client from the global clients map based on the provided userID.
+// It acquires a lock before modifying the map to ensure thread safety.
 func removeClient(userID int) {
 	lock.Lock()
 	delete(clients, userID)

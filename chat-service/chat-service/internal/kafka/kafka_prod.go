@@ -3,15 +3,18 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/segmentio/kafka-go"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/models"
+	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/service"
 )
 
 type KafkaProducer struct {
-	Writer *kafka.Writer
+	Writer  *kafka.Writer
+	service *service.Service
 }
 
 func NewKafkaProducer(brokers []string, topic string) *KafkaProducer {
@@ -26,6 +29,10 @@ func NewKafkaProducer(brokers []string, topic string) *KafkaProducer {
 }
 
 func (kp *KafkaProducer) PublishMessage(msg any) error {
+	if kp.Writer == nil {
+		return fmt.Errorf("kafka writer is nil %v", kp.Writer)
+	}
+	kp.service.SendMessages(msg.(models.Message).SenderID, msg.(models.Message).ReceiverID, msg.(models.Message).Content)
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return err

@@ -1,52 +1,44 @@
 package main
 
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"sync"
-	"time"
-)
-
 // Awesome, I love the challenge of ramping up the difficulty! Since you’ve completed the task scheduler and I’ve given you an inventory management problem for tomorrow, I’ll design a new problem for the day after (Day 3) that’s slightly harder, focusing on a real-world scenario with increased complexity while still being achievable for a junior Go developer in under 30 minutes. The problem will test additional Go skills, introduce a bit more logic, and build on the concepts from the previous problems. I’ll also outline a plan to make future problems progressively harder.
 
 // Day 3 Problem: Event Logger with Persistence
 // You’re building an event logging system for a small application that tracks user actions (e.g., login, logout, purchase). Each event has a timestamp, action type, and user ID. The system should allow logging events, retrieving events for a specific user, and saving/loading the event log to/from a file for persistence. The challenge includes handling file I/O and ensuring thread-safe access to the log (introducing basic concurrency).
 
-type Event struct {
-	Timestamp time.Time
-	Action    string
-	User      int64
-}
+// type Event struct {
+// 	Timestamp time.Time
+// 	Action    string
+// 	User      int64
+// }
 
-var slice = make([]*Event, 0)
-var mu sync.Mutex
+// var slice = make([]*Event, 0)
+// var mu sync.Mutex
 
-func CreateEvents(action string, user int64) error {
-	mu.Lock()
-	defer mu.Unlock()
-	slice = append(slice, &Event{
-		Timestamp: time.Now(), // Set timestamp to current time
-		Action:    action,
-		User:      user,
-	})
-	data, err := json.MarshalIndent(slice, "", "  ")
+// func CreateEvents(action string, user int64) error {
+// 	mu.Lock()
+// 	defer mu.Unlock()
+// 	slice = append(slice, &Event{
+// 		Timestamp: time.Now(), // Set timestamp to current time
+// 		Action:    action,
+// 		User:      user,
+// 	})
+// 	data, err := json.MarshalIndent(slice, "", "  ")
 
-	if err != nil {
-		panic(err)
-	}
-	err = os.WriteFile("output12.json", data, 0644)
-	if err != nil {
-		fmt.Printf(err.Error())
-	}
-	return nil
-}
-func main() {
-	CreateEvents("bubun", 49)
-	for i, e := range slice {
-		fmt.Printf("Event %d: %+v\n", i, e)
-	}
-}
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	err = os.WriteFile("output12.json", data, 0644)
+// 	if err != nil {
+// 		fmt.Printf(err.Error())
+// 	}
+// 	return nil
+// }
+// func main() {
+// 	CreateEvents("bubun", 49)
+// 	for i, e := range slice {
+// 		fmt.Printf("Event %d: %+v\n", i, e)
+// 	}
+// }
 
 // Requirements:
 
