@@ -16,7 +16,9 @@ type User struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	Role      string         `json:"role"`
 }
-type message struct {
-	message string
-}
+
+// type message struct {
+// 	message string
+// }

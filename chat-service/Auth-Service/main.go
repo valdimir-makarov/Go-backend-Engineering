@@ -19,7 +19,8 @@ func main() {
 	topic := "auth-messages"
 	kafkaInit := kafka.KafkaProducerInitializer(brokers, topic)
 	userRepo := repository.NewUserRepository(db, kafkaInit)
-	ctrl := controllers.NewController(userRepo)
+
+	ctrl := controllers.NewController(userRepo, *kafkaInit)
 	// Use Gin in release mode for production
 	gin.SetMode(gin.ReleaseMode)
 
@@ -35,10 +36,19 @@ func main() {
 
 	// Register routes (e.g., login, register, logout)
 	// Register routes
+	auth := r.Group("/auth")
+	auth.Use(middleware.JWTAuth())
+	admin := r.Group("/admin")
+	admin.Use(middleware.JWTAuth())      // 1️⃣ decode & inject userID
+	admin.Use(middleware.TraceRequest()) // 2️⃣ tracing
+	{
+		admin.POST("/profile", ctrl.Profile)
+	}
+	// auth.GET("/profile", ctrl.Profile) // Example protected route
 	r.POST("/login", ctrl.Login)
 	r.POST("/register", ctrl.Register)
-	r.GET("/profile", ctrl.Profile)
 	r.POST("/logout", ctrl.Logout)
+	// r.GET("/profile", ctrl.Profile)
 
 	// for _, route := range r.Routes() {
 	// 	log.Printf("Registered route: %s %s", route.Method, route.Path)

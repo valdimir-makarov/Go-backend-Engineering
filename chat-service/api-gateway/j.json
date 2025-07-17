@@ -1,2 +1,6 @@
-curl -X POST http://localhost:9001/register -H "Content-Type: application/json" -d '{"name": "busdsdsdbun123", "email": "bubudsdsdn123@example.com", "password": "securepass456"}'
-curl -X POST http://localhost:9001/login -H "Content-Type: application/json" -d '{"email": "bubun123@example.com", "password": "securepass456"}'
+// // curl -X POST http://localhost:9001/register -H "Content-Type: application/json" -d '{"name": "busdsdsdbun123", "email": "bubudsdsdn123@example.com", "password": "securepass456"}'
+// curl -X POST http://localhost:9001/login -H "Content-Type: application/json" -d '{"email": "bubun123@example.com", "password": "securepass456"}'
+
+
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJleHAiOjE3NTI3OTY5MDAsImlhdCI6MTc1MjcxMDUwMH0.FaXUNAU4TaXZaatBvq_uPi_bjU1u_TawSc597nsUJCE

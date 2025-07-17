@@ -13,11 +13,11 @@ type KafkaProducer struct {
 	Writer *kafka.Writer
 }
 
-func KafkaProducerInitializer(brokers string, topic string) *KafkaProducer {
+func KafkaProducerInitializer() *KafkaProducer {
 
 	return &KafkaProducer{
 		Writer: &kafka.Writer{
-			Addr:         kafka.TCP("kafka:9092"), // Replace with your Kafka broker address
+			Addr:         kafka.TCP("kafka:9092"),
 			Topic:        "auth-topic",
 			Balancer:     &kafka.LeastBytes{},
 			RequiredAcks: kafka.RequireAll,

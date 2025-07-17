@@ -27,6 +27,17 @@ func JWTAuth() gin.HandlerFunc {
 		}
 
 		c.Set("userID", claims.UserID)
+		c.Set("role", claims.Role)
+		c.Next()
+	}
+}
+func RequireRole(required string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists || role != required {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+			return
+		}
 		c.Next()
 	}
 }

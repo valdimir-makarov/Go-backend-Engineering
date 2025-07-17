@@ -28,12 +28,14 @@ var (
 type ExecutionService struct {
 	containers    map[string]string
 	Sanitizer     *pkg.CodeSanitizer
+	ContainerPool *pool.ContainerPool
 	KafkaWriter   *kafka.Writer
 	KafkaReader   *kafka.Reader
-	ContainerPool *pool.ContainerPool
+
+	// Remove KafkaService unless you have a struct or interface named KafkaService in your kafka directory/package.
 }
 
-func NewExecutionService() *ExecutionService {
+func NewExecutionService(broker, submissionTopic, resultTopic string) *ExecutionService {
 	return &ExecutionService{
 		containers: map[string]string{
 			"python": "python-executor",
@@ -42,13 +44,13 @@ func NewExecutionService() *ExecutionService {
 		},
 		Sanitizer: pkg.NewCodeSanitizer(10000),
 		KafkaWriter: &kafka.Writer{
-			Addr:     kafka.TCP("kafka:9093"),
-			Topic:    "code-submissions",
+			Addr:     kafka.TCP(broker),
+			Topic:    submissionTopic,
 			Balancer: &kafka.LeastBytes{},
 		},
 		KafkaReader: kafka.NewReader(kafka.ReaderConfig{
-			Brokers:  []string{"kafka:9093"},
-			Topic:    "results",
+			Brokers:  []string{broker},
+			Topic:    resultTopic,
 			GroupID:  "api-group",
 			MinBytes: 10e3,
 			MaxBytes: 10e6,
@@ -67,34 +69,30 @@ func (s *ExecutionService) HandleExe(w http.ResponseWriter, r *http.Request) err
 	}
 
 	if strings.TrimSpace(req.Code) == "" || strings.TrimSpace(req.Language) == "" || strings.TrimSpace(req.Method) == "" {
-		logrus.Warn("Missing required fields in request")
 		http.Error(w, ErrInvalidRequest.Error(), http.StatusBadRequest)
 		return ErrInvalidRequest
 	}
 
 	if req.Method != "docker" {
-		logrus.Warnf("Unsupported method: %s", req.Method)
 		http.Error(w, ErrMethodNotSupported.Error(), http.StatusBadRequest)
 		return ErrMethodNotSupported
 	}
 
 	if !lang.IsSupported(req.Language) {
-		logrus.Warnf("Unsupported language: %s", req.Language)
 		http.Error(w, ErrLanguageNotSupported.Error(), http.StatusBadRequest)
 		return ErrLanguageNotSupported
 	}
 
 	if err := s.Sanitizer.SanitizeCode(req.Code, req.Language); err != nil {
-		logrus.Warnf("Invalid code: %v", err)
-		response := models.ExecutionResponse{
+		resp := models.ExecutionResponse{
 			Error:         err.Error(),
 			StatusMessage: "Code Sanitization Error",
 		}
-		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(resp)
 		return err
 	}
+
 	container := s.ContainerPool.GetContainer()
 	defer s.ContainerPool.ReleaseContainer(container)
 
@@ -107,7 +105,6 @@ func (s *ExecutionService) HandleExe(w http.ResponseWriter, r *http.Request) err
 
 	data, err := json.Marshal(sub)
 	if err != nil {
-		logrus.Errorf("Failed to marshal submission: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return err
 	}
@@ -116,51 +113,43 @@ func (s *ExecutionService) HandleExe(w http.ResponseWriter, r *http.Request) err
 		Key:   []byte(sub.ID),
 		Value: data,
 	}); err != nil {
-		logrus.Errorf("Failed to write to Kafka: %v", err)
 		http.Error(w, "Failed to queue submission", http.StatusInternalServerError)
 		return err
 	}
 
-	logrus.Infof("Submission queued: %s", sub.ID)
-	// Poll for result with a timeout (e.g., 10 seconds)
+	// Wait for result with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	for {
 		select {
 		case <-ctx.Done():
-			logrus.Warnf("Timeout waiting for result: %s", sub.ID)
-			response := models.ExecutionResponse{
+			resp := models.ExecutionResponse{
 				StatusMessage: "Timeout",
 				Error:         ErrTimeout.Error(),
 			}
-			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusRequestTimeout)
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(resp)
 			return ErrTimeout
 		default:
 			msg, err := s.KafkaReader.ReadMessage(ctx)
 			if err != nil {
 				continue
 			}
-
 			var response models.ExecutionResponse
 			if err := json.Unmarshal(msg.Value, &response); err != nil {
-				logrus.Errorf("Failed to unmarshal result: %v", err)
 				continue
 			}
-			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 			return nil
-
 		}
 	}
 }
 
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logrus.Printf("Received request: %s %s", r.Method, r.URL)
+		logrus.Infof("Received request: %s %s", r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -168,16 +157,23 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 const DefaultPort = "8080"
 
 func main() {
-	logrus.Info("Starting server")
-	execService := NewExecutionService()
-	defer execService.KafkaWriter.Close()
-	defer execService.KafkaReader.Close()
+	logrus.Info("Starting Code Execution Service...")
+
+	broker := os.Getenv("KAFKA_BROKER")
+
+	if broker == "" {
+		broker = "localhost:9092" // fallback for local testing
+	}
+	// Optionally, initialize any Kafka consumer/producer resources here if needed.
+	logrus.Infof("Kafka broker set to: %s", broker)
+	execService := NewExecutionService(broker, "code-submissions", "results")
 
 	r := mux.NewRouter()
 	r.Use(LoggingMiddleware)
+
 	r.HandleFunc("/execute", func(w http.ResponseWriter, r *http.Request) {
 		if err := execService.HandleExe(w, r); err != nil {
-			logrus.Errorf("HandleExe failed: %v", err)
+			logrus.Errorf("Execution failed: %v", err)
 		}
 	}).Methods("POST")
 
@@ -186,8 +182,8 @@ func main() {
 		port = DefaultPort
 	}
 
-	logrus.Printf("Starting server on port %s...", port)
+	logrus.Infof("Listening on port %s...", port)
 	if err := http.ListenAndServe(":"+port, r); err != nil {
-		logrus.Fatalf("Could not start server: %v", err)
+		logrus.Fatalf("Server failed: %v", err)
 	}
 }

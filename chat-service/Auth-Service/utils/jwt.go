@@ -10,17 +10,20 @@ import (
 var jwtKey = []byte("super-secret-key") // 🔥 hardcoded secret (local dev ONLY)
 
 type Claims struct {
-	UserID uint `json:"user_id"`
+	UserID uint   `json:"user_id"`
+	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
 // GenerateJWT generates a JWT token for a user
-func GenerateJWT(userID uint) (string, error) {
+func GenerateJWT(userID uint, role string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour) // Token valid for 24 hours
 
 	claims := &Claims{
 		UserID: userID,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
+
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},

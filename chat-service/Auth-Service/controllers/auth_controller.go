@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 
+	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/Auth-Service/kafka"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/Auth-Service/repository"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/Auth-Service/utils"
 
@@ -22,12 +23,13 @@ type RegisterRequest struct {
 }
 
 type Controller struct {
-	userRepo repository.UserRepository
+	userRepo  repository.UserRepository
+	kafkaProd *kafka.KafkaProducer
 }
 
 // NewController creates a new Controller with the given repository
-func NewController(userRepo repository.UserRepository) *Controller {
-	return &Controller{userRepo: userRepo}
+func NewController(userRepo repository.UserRepository, kafka kafka.KafkaProducer) *Controller {
+	return &Controller{userRepo: userRepo, kafkaProd: &kafka}
 }
 
 func (ctrl *Controller) Login(c *gin.Context) {
@@ -49,7 +51,7 @@ func (ctrl *Controller) Login(c *gin.Context) {
 	}
 
 	// Generate JWT
-	token, err := utils.GenerateJWT(user.ID)
+	token, err := utils.GenerateJWT(user.ID, user.Role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -75,7 +77,7 @@ func (ctrl *Controller) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
 		return
 	}
-
+	ctrl.kafkaProd.KafkaProd(req)
 	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 

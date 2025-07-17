@@ -14,6 +14,7 @@ func NewRouter(cfg *config.Config) http.Handler {
 	// Route to auth service
 	r.Handle("/register", Proxy(cfg.AuthServiceURL+"/register")).Methods("POST")
 	r.Handle("/login", Proxy(cfg.AuthServiceURL+"/login")).Methods("POST")
+	r.Handle("/admin/profile", Proxy(cfg.AuthServiceURL+"/admin/profile")).Methods("POST")
 
 	// Add more routes here...
 

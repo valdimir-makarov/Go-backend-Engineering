@@ -1,50 +1,69 @@
 {
-    "version": 3,
-    "port": 9001,
-    "timeout": "3s",
-    "endpoints": [
-      {
-        "endpoint": "/register",
-        "method": "POST",
-        "backend": [
-          {
-            "host": ["http://auth-service:8080"],
-            "url_pattern": "/register",
-            "method": "POST"
-          }
-        ]
+  "version": 3,
+  "port": 9001,
+  "timeout": "3s",
+  "endpoints": [
+    {
+      "endpoint": "/register",
+      "method": "POST",
+      "backend": [
+        {
+          "host": ["http://auth-service:8080"],
+          "url_pattern": "/register",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/login",
+      "method": "POST",
+      "backend": [
+        {
+          "host": ["http://auth-service:8080"],
+          "url_pattern": "/login",
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "endpoint": "/chat",
+      "method": "GET",
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8080/.well-known/jwks.json",
+          "roles_key": "role",
+          "roles": ["user", "admin"],
+          "disable_jwk_security": true
+        }
       },
-      {
-        "endpoint": "/login",
-        "method": "POST",
-        "backend": [
-          {
-            "host": ["http://auth-service:8080"],
-            "url_pattern": "/login",
-            "method": "POST"
-          }
-        ]
+      "backend": [
+        {
+          "host": ["http://chat-service:3001"],
+          "url_pattern": "/chat",
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "endpoint": "/admin/profile",
+      "method": "POST",
+      "extra_config": {
+        "github.com/devopsfaith/krakend-jose/validator": {
+          "alg": "RS256",
+          "jwk-url": "http://auth-service:8080/.well-known/jwks.json",
+          "roles_key": "role",
+          "roles": ["admin"],
+          "disable_jwk_security": true
+        }
       },
-      {
-        "endpoint": "/chat",
-        "method": "GET",
-        "extra_config": {
-          "github.com/devopsfaith/krakend-jose/validator": {
-            "alg": "RS256",
-            "jwk-url": "http://auth-service:8080/.well-known/jwks.json",
-            "roles_key": "role",    
-            "roles": ["user", "admin"],
-            "disable_jwk_security": true
-          }
-        },
-        "backend": [
-          {
-            "host": ["http://chat-service:3001"],
-            "url_pattern": "/chat",
-            "method": "GET"
-          }
-        ]
-      }
-    ]
-  }
-  
+      "backend": [
+        {
+          "host": ["http://auth-service:8080"],
+          "url_pattern": "/admin/profile",
+          "method": "POST"
+        }
+      ]
+    }
+  ]
+}
