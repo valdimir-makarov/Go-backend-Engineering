@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -21,20 +22,21 @@ func main() {
 	userRepo := repository.NewUserRepository(db, kafkaInit)
 
 	ctrl := controllers.NewController(userRepo, *kafkaInit)
+
 	// Use Gin in release mode for production
 	gin.SetMode(gin.ReleaseMode)
 
+	// Create Gin router
 	r := gin.New()
 
 	// Production-grade logger and recovery
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	// Security middlewarechat-service exited with code 1
+	// Security middleware
 	r.Use(middleware.SecureHeaders())
 	r.Use(middleware.TraceRequest())
 
-	// Register routes (e.g., login, register, logout)
 	// Register routes
 	auth := r.Group("/auth")
 	auth.Use(middleware.JWTAuth())
@@ -44,24 +46,26 @@ func main() {
 	{
 		admin.POST("/profile", ctrl.Profile)
 	}
-	// auth.GET("/profile", ctrl.Profile) // Example protected route
-	r.POST("/login", ctrl.Login)
-	r.POST("/register", ctrl.Register)
-	r.POST("/logout", ctrl.Logout)
-	// r.GET("/profile", ctrl.Profile)
 
-	// for _, route := range r.Routes() {
-	// 	log.Printf("Registered route: %s %s", route.Method, route.Path)
-	// }
-	// Set the port from env or default to 8080
+	// Public routes
+	r.POST("/login", ctrl.Login)
+	r.POST("/register", func(c *gin.Context) {
+		fmt.Printf("Route hit: Path=%s, Method=%s\n", c.Request.URL.Path, c.Request.Method)
+		ctrl.Register(c) // Properly call ctrl.Register with gin.Context
+	})
+	r.POST("/logout", ctrl.Logout)
+
+	// Set the port from env or default to 2021
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "2021"
 	}
-	config.ConnectDatabase()
+
+	// Note: This second call to ConnectDatabase seems redundant; consider removing
+	// config.ConnectDatabase()
 
 	log.Printf("Auth service running on port %s", port)
 	if err := r.Run(":" + port); err != nil {
-		log.Fatal("Failed to start server:", err)
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }
