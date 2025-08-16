@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 
-	"github.com/lib/pq"
 	_ "github.com/lib/pq" // PostgreSQL driver
 	"github.com/sirupsen/logrus"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/config"
@@ -24,7 +23,8 @@ type Repository interface {
 	GetUsername(conn *websocket.Conn) string
 	BroadcastMessage(message []byte) (bool, error)
 	SaveMessage(msg models.Message) error
-	MarkMessageAsDelivered(receiverID uuid.UUID)
+	MarkMessageAsDelivered(messageIDs uuid.UUID) error
+	// MarkMessagesDelivered(messageIDs []uuid.UUID) error
 	GetUndeliveredMessages(receiverID int) ([]models.Message, error)
 	GetGroupMemberIDs(groupID uuid.UUID) ([]int, error)
 }
@@ -36,30 +36,30 @@ type WebSocketRepository struct {
 }
 
 func NewWebSocketRepo() *WebSocketRepository {
-	// PostgreSQL connection string (Docker Compose service name as host)
-	config := config.LoadConfig()
+	cfg := config.LoadConfig()
 
 	psqlInfo := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		config.DBHost, config.DBUser, config.DBPassword, config.DBName, config.DBPort,
+		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort,
 	)
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		log.Fatalf("DB connection error: %v", err)
 	}
+
+	// Retry ping with updated err handling
+	var pingErr error
 	for i := 0; i < 10; i++ {
-		err := db.Ping()
-		if err == nil {
+		pingErr = db.Ping()
+		if pingErr == nil {
 			break
 		}
-		log.Printf("Failed to ping DB: %v. Retrying...", err)
+		log.Printf("Failed to ping DB: %v. Retrying...", pingErr)
 		time.Sleep(2 * time.Second)
 	}
-	// Test the connection
-
-	if err != nil {
-		log.Fatalf("Failed to ping DB: %v", err)
+	if pingErr != nil {
+		log.Fatalf("Failed to connect to DB after retries: %v", pingErr)
 	}
 
 	fmt.Println("Successfully connected to the database!")
@@ -123,6 +123,10 @@ func (r *WebSocketRepository) SaveMessage(msg models.Message) error {
 	if msg.ID == uuid.Nil {
 		msg.ID = uuid.New()
 	}
+	if r.Db == nil {
+		logrus.Error("Database connection is nil")
+		return errors.New("database connection is nil")
+	}
 	if msg.SenderID == 0 || msg.ReceiverID == 0 {
 		logrus.WithFields(logrus.Fields{
 			"sender_id":   msg.SenderID,
@@ -164,6 +168,7 @@ func (r *WebSocketRepository) GetUndeliveredMessages(receiverID int) ([]models.M
 		var msg models.Message
 		err := rows.Scan(&msg.ID, &msg.SenderID, &msg.ReceiverID, &msg.Content)
 		if err != nil {
+
 			continue
 		}
 		messages = append(messages, msg)
@@ -172,26 +177,17 @@ func (r *WebSocketRepository) GetUndeliveredMessages(receiverID int) ([]models.M
 }
 
 // MarkMessageAsDelivered marks messages as delivered for a receiver.
-func (r *WebSocketRepository) MarkMessagesDelivered(messageIDs []uuid.UUID) error {
-	if len(messageIDs) == 0 {
+func (r *WebSocketRepository) MarkMessageAsDelivered(messageID uuid.UUID) error {
+	if messageID == uuid.Nil {
 		return nil
 	}
+	log.Printf("Marking message delivered: %s", messageID.String())
 
-	_, err := r.Db.Exec("UPDATE messages SET delivered = true WHERE id = ANY($1)", pq.Array(messageIDs))
+	_, err := r.Db.Exec("UPDATE messages SET delivered = true WHERE id = $1", messageID)
 	if err != nil {
-		log.Printf("Error marking messages as delivered: %v", err)
+		log.Printf("Error marking message as delivered: %v", err)
 	}
 	return err
-}
-
-// MarkMessageAsDelivered updates messages as delivered for a specific receiver.
-func (r *WebSocketRepository) MarkMessageAsDelivered(receiverID uuid.UUID) {
-	_, err := r.Db.Exec("UPDATE messages SET delivered = true WHERE receiver_id = $1 AND delivered = false", receiverID)
-	if err != nil {
-		log.Printf("Error marking messages as delivered for receiver %s: %v", receiverID, err)
-
-	}
-
 }
 
 // File: repository/group_repository.go

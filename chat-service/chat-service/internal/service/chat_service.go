@@ -22,7 +22,7 @@ func WebService(repo repository.Repository) *Service {
 
 // SendMessages sends a message from the sender to the receiver.
 // If the receiver is offline, the message is saved in the database.
-func (s *Service) SendMessages(senderID, receiverID int, content string) error {
+func (s *Service) SendMessages(senderID, receiverID int, content string) {
 	// Use a globally injected logger instead of initializing a new one each time
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
@@ -51,11 +51,11 @@ func (s *Service) SendMessages(senderID, receiverID int, content string) error {
 	// Save the message to the database
 	if err := s.websocketService.SaveMessage(message); err != nil {
 		logger.Error("Failed to save message", zap.Error(err))
-		return err
+
 	}
 
 	logger.Info("Message saved successfully", zap.String("id", message.ID.String()))
-	return nil
+
 }
 
 // GetPendingMessages retrieves all undelivered messages for a receiver.

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/generated/github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/generated"
 	handler "github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/delivery"
 	kafkaPkg "github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka"
 	authkafka "github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka/Auth_kafka"
@@ -26,10 +25,18 @@ func main() {
 	repo := repository.NewWebSocketRepo()
 	srv := service.WebService(repo)
 
-	producer := kafkaPkg.NewKafkaProducer(brokers, topic)
-	authProducer := authkafka.NewKafkaProducer(brokers, topic_2)
+	if srv == nil {
+		log.Fatal("❌ Service instance (srv) is nil after initialization!")
+	} else {
+		log.Println("✅ Service instance (srv) initialized successfully")
+	}
+	producer := kafkaPkg.NewKafkaProducer(brokers, topic, srv)
+	authProducer := authkafka.NewKafkaProducer(brokers, topic_2, srv)
 
 	wsHandler := handler.NewWebSocketHandler(srv, producer, authProducer)
+	log.Printf("WebSocketHandler created: %+v", wsHandler)
+	log.Printf("WebSocketHandler created: %+v", wsHandler)
+	log.Printf("Service pointer inside handler: %p", wsHandler.HandleWebSocket)
 	fileHandler := handler.NewFileHandler(producer)
 
 	// Start Kafka consumer
@@ -44,8 +51,8 @@ func main() {
 		}
 
 		grpcServer := grpc.NewServer()
-		grpcHandler := handler.NewServer(srv)
-		generated.RegisterChatServiceServer(grpcServer, grpcHandler)
+		// grpcHandler := handler.NewServer(srv)
+		// generated.RegisterChatServiceServer(grpcServer, grpcHandler)
 
 		fmt.Println("🚀 gRPC server running on", grpcPort)
 		if err := grpcServer.Serve(listener); err != nil {

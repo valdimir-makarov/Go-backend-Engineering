@@ -70,10 +70,10 @@ app.Map("auth/register", async (
         ILogger<Program> log) =>
 {
     var client = clientFactory.CreateClient("auth-service");
-    var path   = context.Request.Path.Value;
-    var query  = context.Request.QueryString.Value;
+    var path = context.Request.Path.Value;
+    var query = context.Request.QueryString.Value;
 
-    log.LogInformation("proxying:Path={path}", path);
+    // log.LogInformation("proxying:Path={path}", path);
 
     if (path == "/auth/register")
     {
@@ -84,7 +84,7 @@ app.Map("auth/register", async (
 
         var request = new HttpRequestMessage
         {
-            Method     = new HttpMethod(context.Request.Method),
+            Method = new HttpMethod(context.Request.Method),
             RequestUri = new Uri(client.BaseAddress + cleanBackendPath + query)
         };
 
@@ -96,7 +96,50 @@ app.Map("auth/register", async (
             if (!request.Headers.TryAddWithoutValidation(h.Key, h.Value.ToArray()))
                 request.Content?.Headers.TryAddWithoutValidation(h.Key, h.Value.ToArray());
 
-        log.LogInformation("Request URI={RequestURI}", request.RequestUri);
+        // log.LogInformation("Request URI={RequestURI}", request.RequestUri);
+
+        using var response = await client.SendAsync(
+                                request,
+                                HttpCompletionOption.ResponseHeadersRead,
+                                context.RequestAborted);
+
+        context.Response.StatusCode = (int)response.StatusCode;
+        await response.Content.CopyToAsync(context.Response.Body);
+    }
+});
+app.Map("auth/login", async (
+        HttpContext context,
+        IHttpClientFactory clientFactory,
+        ILogger<Program> log) =>
+{
+    var client = clientFactory.CreateClient("auth-service");
+    var path = context.Request.Path.Value;
+    var query = context.Request.QueryString.Value;
+
+    // log.LogInformation("proxying:Path={path}", path);
+
+    if (path == "/auth/login")
+    {
+        var backendEndpoint = path.Replace("/auth", "");   // -> "/login"
+        var cleanBackendPath = backendEndpoint.StartsWith("/")
+                               ? backendEndpoint[1..]      // remove leading /
+                               : backendEndpoint;
+
+        var request = new HttpRequestMessage
+        {
+            Method = new HttpMethod(context.Request.Method),
+            RequestUri = new Uri(client.BaseAddress + cleanBackendPath + query)
+        };
+
+        // *** copy the body ***
+        request.Content = new StreamContent(context.Request.Body);
+
+        // *** copy headers ***
+        foreach (var h in context.Request.Headers)
+            if (!request.Headers.TryAddWithoutValidation(h.Key, h.Value.ToArray()))
+                request.Content?.Headers.TryAddWithoutValidation(h.Key, h.Value.ToArray());
+
+        // log.LogInformation("Request URI={RequestURI}", request.RequestUri);
 
         using var response = await client.SendAsync(
                                 request,

@@ -2,8 +2,6 @@ module github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-serv
 
 go 1.23.0 // Update this to a valid Go version
 
-toolchain go1.24.1
-
 require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/segmentio/kafka-go v0.4.47

@@ -8,13 +8,15 @@ import (
 	"github.com/segmentio/kafka-go"
 
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/models"
+	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/service"
 )
 
 type KafkaProducer struct {
-	Writer *kafka.Writer
+	Writer  *kafka.Writer
+	service *service.Service
 }
 
-func NewKafkaProducer(brokers []string, topic string) *KafkaProducer {
+func NewKafkaProducer(brokers []string, topic string, srv *service.Service) *KafkaProducer {
 	return &KafkaProducer{
 		Writer: &kafka.Writer{
 			Addr:         kafka.TCP(brokers...),
@@ -22,6 +24,7 @@ func NewKafkaProducer(brokers []string, topic string) *KafkaProducer {
 			Balancer:     &kafka.LeastBytes{},
 			RequiredAcks: kafka.RequireAll,
 		},
+		service: srv,
 	}
 }
 

@@ -36,6 +36,10 @@ func (h *WebSocketHandler) addClient(userID int, conn *websocket.Conn) {
 	lock.Lock()
 	clients[userID] = conn
 	lock.Unlock()
+	if h.handler == nil {
+		log.Println("WebSocketHandler's service is nil! Cannot send message")
+
+	}
 
 	msgchannel := make(chan models.Message, 1000)
 	lock.Lock()
@@ -44,17 +48,30 @@ func (h *WebSocketHandler) addClient(userID int, conn *websocket.Conn) {
 
 	//create a go routine per useer
 	go func() {
+		// for msg := range msgchannel {
+		// 	err := conn.WriteJSON(msg)
+		// 	if err != nil {
+		// 		log.Printf("Write to user error %d : %v", userID, err)
+
+		// 	}
+		// }
 		for msg := range msgchannel {
+
 			err := conn.WriteJSON(msg)
 			if err != nil {
-				log.Printf("Write to user error %d : %v", userID, err)
-				break
+				if websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+					log.Printf("Connection closed for %d: %v", userID, err)
+					break // This is a permanent close
+				}
+				log.Printf("Temporary write error for %d: %v", userID, err)
+				continue // Skip just this message, keep the connection alive
 			}
 		}
 
 	}()
 
 	h.sendPendingMessages(userID, conn)
+
 }
 
 // removeClient removes a client from the global clients map based on the provided userID.
@@ -73,6 +90,7 @@ func getClient(userID int) (*websocket.Conn, bool) {
 }
 func (h *WebSocketHandler) sendPendingMessages(userID int, conn *websocket.Conn) {
 	messages, err := h.handler.GetPendingMessages(userID)
+	log.Printf("messages: %+v", messages)
 	if err != nil {
 		log.Printf("Error fetching pending messages for user %d: %v", userID, err)
 		return
@@ -84,6 +102,7 @@ func (h *WebSocketHandler) sendPendingMessages(userID int, conn *websocket.Conn)
 			log.Printf("Error sending pending message to user %d: %v", userID, err)
 			continue
 		}
+		log.Printf("the message ID: %v", msg.ID) // %v will print UUID properly as string
 		messageIDs = append(messageIDs, msg.ID)
 	}
 
@@ -122,14 +141,22 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 
 	h.kafkaProducerAuth.SendUserStatusEvent(userIDStr, "UserLoggedIn")
 	h.addClient(userID, conn)
-
 	defer func() {
-		removeClient(userID)
+		// Clean up client and channel
+		lock.Lock()
+		if ch, exists := userschannel[userID]; exists {
+			close(ch) // Close the channel to stop the goroutine
+			delete(userschannel, userID)
+		}
+
+		lock.Unlock()
 		conn.Close()
+		h.kafkaProducerAuth.SendUserStatusEvent(userIDStr, "UserLoggedOut")
 		log.Printf("Connection closed for user %d", userID)
 	}()
 
 	h.ListenForMessages(userID, conn)
+
 }
 func (h *WebSocketHandler) ListenForMessages(userID int, conn *websocket.Conn) {
 
@@ -152,9 +179,16 @@ func (h *WebSocketHandler) handleIncomingMessage(msg models.Message) {
 	lock.Lock()
 	ch, ok := userschannel[msg.ReceiverID]
 	lock.Unlock()
-	if ok {
-		ch <- msg
-		log.Printf("message Queued %v ", msg.ReceiverID)
+	if ok && ch != nil {
+		select {
+
+		case ch <- msg:
+			log.Printf("message Queued %v ", msg.ReceiverID)
+		default:
+			log.Printf("the message Queue is full /handleincomingmessages->chat_handler.go")
+			h.saveAndPublishMessage(msg)
+		}
+
 	} else {
 		h.saveAndPublishMessage(msg)
 	}
@@ -173,7 +207,11 @@ func (h *WebSocketHandler) handleIncomingMessage(msg models.Message) {
 }
 
 func (h *WebSocketHandler) saveAndPublishMessage(msg models.Message) {
-	err := h.handler.SendMessages(msg.SenderID, msg.ReceiverID, msg.Content)
+	if h.handler == nil {
+		log.Println("Error: handler is nil in saveAndPublishMessage")
+
+	}
+	h.handler.SendMessages(msg.SenderID, msg.ReceiverID, msg.Content)
 	h.kafkaProducer.PublishMessage(models.Message{
 		ID:         uuid.New(),
 		SenderID:   msg.SenderID,
@@ -181,10 +219,10 @@ func (h *WebSocketHandler) saveAndPublishMessage(msg models.Message) {
 		Content:    msg.Content,
 		Delivered:  false,
 	})
-	if err != nil {
-		log.Printf("Error saving message for user %d: %v", msg.ReceiverID, err)
-		return
-	}
+	// if err != nil {
+	// 	log.Printf("Error saving message for user %d: %v", msg.ReceiverID, err)
+	// 	return
+	// }
 	log.Printf("Message saved for user %d", msg.ReceiverID)
 }
 

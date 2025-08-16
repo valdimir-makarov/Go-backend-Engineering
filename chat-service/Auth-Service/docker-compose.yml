@@ -64,6 +64,7 @@ services:
 
 networks:
   default:
+    external: true
     name: root_default
 
 volumes:

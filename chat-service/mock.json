@@ -3,35 +3,5 @@ bubun@bubun:~$ curl -X POST http://localhost:2021/admin/profile \
 {"created_at":"2025-07-17T01:46:37.294692Z","email":"farhan@example.com","name":"Farhan","user_id":6,"uuid":"83ac703a-c560-497c-814c-6a09b3373b46"}bubun@bubun:~$ 
 
 
-app.Map("/auth/register", async (HttpContext context, IHttpClientFactory clientFactory, ILogger<Program> log) =>
-{
-    var client = clientFactory.CreateClient("auth-service");
-
-    // Strip the leading /auth so we only forward /register
-    var downstreamPath = context.Request.Path.Value!.Replace("/auth", "", StringComparison.OrdinalIgnoreCase);
-    var uri = new Uri(client.BaseAddress!, downstreamPath + context.Request.QueryString.Value);
-
-    log.LogInformation("Proxying to {Uri}", uri);
-
-    var request = new HttpRequestMessage(new HttpMethod(context.Request.Method), uri)
-    {
-        Content = new StreamContent(context.Request.Body)
-    };
-
-    // Copy important headers
-    foreach (var h in context.Request.Headers)
-    {
-        if (!request.Headers.TryAddWithoutValidation(h.Key, h.Value.ToArray()))
-            request.Content?.Headers.TryAddWithoutValidation(h.Key, h.Value.ToArray());
-    }
-
-    using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
-
-    context.Response.StatusCode = (int)response.StatusCode;
-    foreach (var h in response.Headers)
-        context.Response.Headers[h.Key] = h.Value.ToArray();
-    foreach (var h in response.Content.Headers)
-        context.Response.Headers[h.Key] = h.Value.ToArray();
-
-    await response.Content.CopyToAsync(context.Response.Body);
-});t the server.
+// api-gateway->bubun@bubun-To-Be-Filled-By-O-E-M:~$
+//          curl -v -X POST http://localhost:5025/auth/register -H "Content-Type: application/json" -d '{"name":"tzxzxestuser123","email":"testzxzxuser123@example.com","password":"securepass456"}'

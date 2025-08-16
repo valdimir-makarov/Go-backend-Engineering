@@ -17,7 +17,7 @@ type KafkaProducer struct {
 	service *service.Service
 }
 
-func NewKafkaProducer(brokers []string, topic string) *KafkaProducer {
+func NewKafkaProducer(brokers []string, topic string, svc *service.Service) *KafkaProducer {
 	return &KafkaProducer{
 		Writer: &kafka.Writer{
 			Addr:         kafka.TCP(brokers...),
@@ -25,6 +25,7 @@ func NewKafkaProducer(brokers []string, topic string) *KafkaProducer {
 			Balancer:     &kafka.LeastBytes{},
 			RequiredAcks: kafka.RequireAll,
 		},
+		service: svc, // <-- set the service here
 	}
 }
 
