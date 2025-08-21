@@ -4,4 +4,5 @@ bubun@bubun:~$ curl -X POST http://localhost:2021/admin/profile \
 
 
 // api-gateway->bubun@bubun-To-Be-Filled-By-O-E-M:~$
-//          curl -v -X POST http://localhost:5025/auth/register -H "Content-Type: application/json" -d '{"name":"tzxzxestuser123","email":"testzxzxuser123@example.com","password":"securepass456"}'
+//          curl -v -X POST http://localhost:5025/auth/login -H "Content-Type: application/json" -d '{"name":"tzxzxestuser123","email":"testzxzxuser123@example.com","password":"securepass456"}'
+// docker exec -it postgres-auth psql -U postgres -d auth_db

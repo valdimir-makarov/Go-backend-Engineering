@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/Auth-Service/kafka"
@@ -41,6 +42,7 @@ func (ctrl *Controller) Login(c *gin.Context) {
 
 	// Find user
 	user, err := ctrl.userRepo.FindUserByEmail(req.Email)
+	log.Printf("User found: %+v", user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
@@ -57,7 +59,8 @@ func (ctrl *Controller) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.JSON(http.StatusOK, gin.H{"token": token,
+		"user_id": user})
 }
 
 func (ctrl *Controller) Register(c *gin.Context) {
@@ -105,6 +108,32 @@ func (ctrl *Controller) Profile(c *gin.Context) {
 		"email":      user.Email,
 		"created_at": user.CreatedAt,
 	})
+}
+
+func (ctrl *Controller) GetAllUsers(c *gin.Context) {
+	users, err := ctrl.userRepo.GetAllUsers()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+		return
+	}
+
+	if len(users) == 0 {
+		c.JSON(http.StatusOK, gin.H{"users": []interface{}{}})
+		log.Println("No users found in the database")
+		return
+	}
+
+	// Log users for debugging
+	log.Printf("Retrieved %d users", len(users))
+	for _, user := range users {
+		log.Printf("User: %+v", user)
+	}
+
+	// Send a single JSON response
+	c.JSON(http.StatusOK, gin.H{
+		"users": users,
+	})
+	log.Println("All users retrieved successfully")
 }
 
 func (ctrl *Controller) Logout(c *gin.Context) {

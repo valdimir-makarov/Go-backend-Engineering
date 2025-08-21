@@ -4,6 +4,17 @@ using Microsoft.Extensions.DependencyInjection; // Import dependency injection s
 using System.Net.Http;
 using Serilog;
 var builder = WebApplication.CreateBuilder(args);
+//add cors policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocalhost8080",
+        policy => policy
+            .WithOrigins("http://localhost:8080") // frontend origin
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials() // if using cookies/auth headers
+    );
+});
 
 // Add services to the container.
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -18,6 +29,7 @@ client.BaseAddress = new Uri("http://localhost:2021");    // In Go, you'd set th
 
 var app = builder.Build();
 app.UseRouting();
+app.UseCors("AllowLocalhost8080");
 // Configure the HTTP request pipeline.
 // app.Map("auth/register", async (HttpContext context, IHttpClientFactory clientFactory, ILogger<Program>log) =>
 // {
@@ -150,6 +162,49 @@ app.Map("auth/login", async (
         await response.Content.CopyToAsync(context.Response.Body);
     }
 });
+app.Map("auth/users", async (
+        HttpContext context,
+        IHttpClientFactory clientFactory,
+        ILogger<Program> log) =>
+{
+    var client = clientFactory.CreateClient("auth-service");
+    var path = context.Request.Path.Value;
+    var query = context.Request.QueryString.Value;
+
+    if (path == "/auth/users")
+    {
+        var backendEndpoint = path.Replace("/auth", "");   // -> "/users"
+        var cleanBackendPath = backendEndpoint.StartsWith("/")
+                               ? backendEndpoint[1..]      // remove leading /
+                               : backendEndpoint;
+
+        var request = new HttpRequestMessage
+        {
+            Method = new HttpMethod(context.Request.Method),
+            RequestUri = new Uri(client.BaseAddress + cleanBackendPath + query)
+        };
+
+        // copy body if present
+        if (context.Request.Body.CanSeek || context.Request.ContentLength > 0)
+            request.Content = new StreamContent(context.Request.Body);
+
+        // copy headers
+        foreach (var h in context.Request.Headers)
+            if (!request.Headers.TryAddWithoutValidation(h.Key, h.Value.ToArray()))
+                request.Content?.Headers.TryAddWithoutValidation(h.Key, h.Value.ToArray());
+
+        using var response = await client.SendAsync(
+                                request,
+                                HttpCompletionOption.ResponseHeadersRead,
+                                context.RequestAborted);
+
+        context.Response.StatusCode = (int)response.StatusCode;
+        await response.Content.CopyToAsync(context.Response.Body);
+    }
+});
+
+        
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

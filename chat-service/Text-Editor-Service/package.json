@@ -9,7 +9,6 @@
     "build": "tsc",
     "start": "node dist/server.js",
         "run:crdt": "node --loader ts-node/esm src/CRDT.ts"
-
   },
   "keywords": [],
   "author": "",

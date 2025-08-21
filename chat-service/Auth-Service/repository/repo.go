@@ -15,6 +15,7 @@ type UserRepository interface {
 	CreateUser(name, email, password string) (uint, error)
 	FindUserByEmail(email string) (*models.User, error)
 	FindUserByID(id uint) (*models.User, error)
+	GetAllUsers() ([]models.User, error)
 }
 
 // userRepository implements UserRepository
@@ -79,4 +80,13 @@ func (r *userRepository) FindUserByID(id uint) (*models.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// GetAllUsers retrieves all users from the database
+func (r *userRepository) GetAllUsers() ([]models.User, error) {
+	var users []models.User
+	if err := r.db.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
 }

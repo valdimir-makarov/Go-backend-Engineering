@@ -54,6 +54,7 @@ func main() {
 		ctrl.Register(c) // Properly call ctrl.Register with gin.Context
 	})
 	r.POST("/logout", ctrl.Logout)
+	r.GET("/users", ctrl.GetAllUsers)
 
 	// Set the port from env or default to 2021
 	port := os.Getenv("PORT")
