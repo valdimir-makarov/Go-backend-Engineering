@@ -1,7 +1,10 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 //	type Message struct {
@@ -19,6 +22,17 @@ type Message struct {
 	ReceiverID int        `json:"receiver_id"`
 	Content    string     `json:"content"`
 	GroupID    *uuid.UUID `json:"group_id,omitempty"` // group chat
-
-	Delivered bool `json:"delivered"`
+	CreatedAt  time.Time  `json:"created_at"`
+	Delivered  bool       `json:"delivered"`
+}
+type User struct {
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	UUID      string         `gorm:"type:uuid;default:uuid_generate_v4()" json:"uuid"`
+	Name      string         `gorm:"size:255;not null" json:"name"`
+	Email     string         `gorm:"size:255;not null;unique" json:"email"`
+	Password  string         `gorm:"not null" json:"-"` // Never return password!
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	Role      string         `json:"role"`
 }

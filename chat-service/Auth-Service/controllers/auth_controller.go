@@ -80,7 +80,12 @@ func (ctrl *Controller) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register user"})
 		return
 	}
-	ctrl.kafkaProd.KafkaProd(req)
+	user, err := ctrl.userRepo.FindUserByEmail(req.Email)
+	if err != nil {
+
+		log.Printf("the Email couldnt find While Registering +%v", err)
+	}
+	ctrl.kafkaProd.KafkaProd(user)
 	c.JSON(http.StatusOK, gin.H{"message": "User registered successfully"})
 }
 

@@ -27,6 +27,8 @@ type Repository interface {
 	// MarkMessagesDelivered(messageIDs []uuid.UUID) error
 	GetUndeliveredMessages(receiverID int) ([]models.Message, error)
 	GetGroupMemberIDs(groupID uuid.UUID) ([]int, error)
+	GetPrevMessages(userID int, receiverID int) ([]models.Message, error)
+	SetTheUserIDCompingFromTheAuthService(userID int) error
 }
 
 type WebSocketRepository struct {
@@ -212,4 +214,93 @@ func (r *WebSocketRepository) GetGroupMemberIDs(groupID uuid.UUID) ([]int, error
 		userIDs = append(userIDs, id)
 	}
 	return userIDs, nil
+}
+
+func (r *WebSocketRepository) GetPrevMessages(userID int, receiverID int) ([]models.Message, error) {
+	var conversationID string
+
+	err := r.Db.QueryRow(`
+        SELECT c.id
+        FROM conversation c
+        JOIN conversation_participants cp1 
+          ON cp1.conversation_id = c.id AND cp1.user_id = $1
+        JOIN conversation_participants cp2 
+          ON cp2.conversation_id = c.id AND cp2.user_id = $2
+        WHERE c.is_group = false
+        LIMIT 1;
+    `, userID, receiverID).Scan(&conversationID)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("no conversation found between users")
+	} else if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.Db.Query(`
+        SELECT id, sender_id, content, created_at, delivered
+        FROM messages
+        WHERE conversation_id = $1
+        ORDER BY created_at ASC
+        LIMIT 50 OFFSET 0;
+    `, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var msgs []models.Message
+	for rows.Next() {
+		var msg models.Message
+		if err := rows.Scan(&msg.ID, &msg.SenderID, &msg.Content, &msg.CreatedAt, &msg.Delivered); err != nil {
+			return nil, err
+		}
+		msgs = append(msgs, msg)
+	}
+	return msgs, nil
+}
+func (r *WebSocketRepository) SetTheUserIDCompingFromTheAuthService(userID int) error {
+	// Validate userID and database connection
+	if r.Db == nil {
+		logrus.Error("Database connection is nil")
+		return errors.New("database connection is nil")
+	}
+	if userID == 0 {
+		logrus.WithFields(logrus.Fields{
+			"user_id": userID,
+		}).Error("Validation failed: user_id must be a non-zero integer")
+		return errors.New("user_id must be a non-zero integer")
+	}
+
+	// Prepare the SQL query
+	query := `
+        INSERT INTO users (user_id, created_at)
+        VALUES ($1, $2)
+        ON CONFLICT (user_id) DO NOTHING
+    `
+	// Execute the query
+	result, err := r.Db.Exec(query, userID, time.Now())
+	if err != nil {
+		logrus.WithError(err).Error("Failed to insert user_id")
+		return fmt.Errorf("failed to insert user_id %d: %w", userID, err)
+	}
+
+	// Check rows affected to determine success
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		logrus.WithError(err).Error("Failed to get rows affected")
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected > 0 {
+		log.Printf("User saved successfully: user_id=%d\n", userID)
+		logrus.WithFields(logrus.Fields{
+			"user_id": userID,
+		}).Info("User saved successfully")
+	} else {
+		logrus.WithFields(logrus.Fields{
+			"user_id": userID,
+		}).Info("User already exists in users table")
+	}
+
+	return nil
 }

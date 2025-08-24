@@ -1,6 +1,6 @@
 # chat-service/chat-service/Dockerfile
 
-FROM golang:1.21 AS builder
+FROM golang:1.24 AS builder
 
 WORKDIR /app
 
@@ -9,8 +9,10 @@ COPY go.sum ./
 RUN go mod download
 
 COPY . .
+RUN go install github.com/cosmtrek/air@latest
 
 RUN GOOS=linux GOARCH=amd64 go build -o chat-service ./cmd
+RUN go install github.com/cosmtrek/air@latest
 
 # Final stage
 FROM debian:bullseye-slim
@@ -22,4 +24,5 @@ COPY --from=builder /app/.env .
 
 EXPOSE 3001
 
-CMD ["./chat-service"]
+
+CMD ["air", "-c", ".air.toml"]

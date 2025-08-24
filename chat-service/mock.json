@@ -6,3 +6,25 @@ bubun@bubun:~$ curl -X POST http://localhost:2021/admin/profile \
 // api-gateway->bubun@bubun-To-Be-Filled-By-O-E-M:~$
 //          curl -v -X POST http://localhost:5025/auth/login -H "Content-Type: application/json" -d '{"name":"tzxzxestuser123","email":"testzxzxuser123@example.com","password":"securepass456"}'
 // docker exec -it postgres-auth psql -U postgres -d auth_db
+
+
+:bubun@bubun-To-Be-Filled-By-O-E-M:~$ docker exec -it postgres bash
+root@7de5fd2abaa2:/# bubun@bubun-To-Be-Filled-By-O-E-M:~$ docker exec -it postgres bash
+root@c6b9697905da:/# psql -U postgres -d chat_db
+psql (17.5 (Debian 17.5-1.pgdg120+1))
+Type "help" for help.
+
+chat_db=# 
+ migrate -path database/migration/ -database "postgres://postgres:postgres@localhost:5432/chat_db?sslmode=disable" -verbose up
+
+
+
+ bubun@bubun-To-Be-Filled-By-O-E-M:~$ curl -X GET "http://localhost:3001/prevMessages?user_id=123&receiver_id=456"   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJyZWNlaXZlcl9pZCI6IjQ1NiIsIm5hbWUiOiJUZXN0IFVzZXIiLCJleHAiOjE3NjAwNTc5OTksImlhdCI6MTczODUyODc5OX0.dummysignature1234567890"
+bubun@bubun-To-Be-Filled-By-O-E-M:~$ docker exec -it postgres bash
+root@3842202c2b3b:/# docker exec -it postgres sh
+bash: docker: command not found
+root@3842202c2b3b:/# psql -U postgres -d chat_db
+docker run -d --name cloudbeaver -p 8978:8978 dbeaver/cloudbeaver
+
+
+http://localhost:3001/prevMessages?user_id=123&receiver_id=456"   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJyZWNlaXZlcl9pZCI6IjQ1NiIsIm5hbWUiOiJUZXN0IFVzZXIiLCJleHAiOjE3NjAwNTc5OTksImlhdCI6MTczODUyODc5OX0.dummysignature1234567890"

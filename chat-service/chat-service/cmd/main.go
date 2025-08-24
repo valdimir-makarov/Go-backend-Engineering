@@ -65,6 +65,7 @@ func main() {
 	http.HandleFunc("/ws", wsHandler.HandleWebSocket)
 	http.HandleFunc("/wsfl", fileHandler.SendFileHandler)
 	http.HandleFunc("/wsgrpmsg", wsHandler.HandleGroupMessages)
+	http.HandleFunc("/prevMessages", wsHandler.FetchedPrevMessages2)
 
 	port := os.Getenv("CHAT_SERVICE_PORT")
 	if port == "" {

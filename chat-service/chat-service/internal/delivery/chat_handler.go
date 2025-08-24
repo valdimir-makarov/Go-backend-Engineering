@@ -4,15 +4,18 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka"
 	authkafka "github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka/Auth_kafka"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/models"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/service"
+	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/utils"
 )
 
 var (
@@ -36,6 +39,11 @@ func (h *WebSocketHandler) addClient(userID int, conn *websocket.Conn) {
 	lock.Lock()
 	clients[userID] = conn
 	lock.Unlock()
+	if clients[userID] != nil {
+		log.Printf("Client %d connected successfully", userID)
+		//fetched the  previous messages for the user
+
+	}
 	if h.handler == nil {
 		log.Println("WebSocketHandler's service is nil! Cannot send message")
 
@@ -80,6 +88,67 @@ func removeClient(userID int) {
 	lock.Lock()
 	delete(clients, userID)
 	lock.Unlock()
+}
+func (h *WebSocketHandler) FetchedPrevMessages2(w http.ResponseWriter, r *http.Request) {
+
+	userIDStr := r.URL.Query().Get("user_id")
+	receiverIDStr := r.URL.Query().Get("receiver_id")
+
+	userID, _ := strconv.Atoi(userIDStr)
+	receiverID, _ := strconv.Atoi(receiverIDStr)
+	h.FetchedPrevMessages(userID, receiverID)
+
+}
+func (h *WebSocketHandler) FetchedPrevMessages(userID int, receiver_id int) {
+
+	if clients[userID] != nil {
+		messages, err := h.handler.GetPrevMessages(userID, receiver_id)
+		lock.Lock()
+		ch, ok := userschannel[userID]
+		lock.Unlock()
+		if err != nil {
+			logrus.WithFields(logrus.Fields{
+				"user_id":    userID,
+				"service":    "chat-service-chat_handler",
+				"request_id": "req-123456", // Add a unique request ID if available
+				"timestamp":  time.Now().Format(time.RFC3339Nano),
+			}).Error("Error fetching previous messages for bububn userrrsfgfggfgsdsdsdsdsdsdsdsdrrdsdsdsdsdsdrrrrrrrrrrrrrrrrrr 2222222222", err)
+			log.Printf("what is the error %v ", err)
+		}
+
+		if ok && ch != nil {
+
+			for _, msg := range messages {
+				select {
+				case ch <- msg:
+					logrus.WithFields(logrus.Fields{
+						"user_id":    userID,
+						"service":    "chat-service-chat_handler",
+						"request_id": "req-123456", // Add a unique request ID if available
+						"timestamp":  time.Now().Format(time.RFC3339Nano),
+					}).Info("Previous messages sent to user")
+				case <-time.After(1 * time.Second): // Timeout to prevent blocking
+					logrus.WithFields(logrus.Fields{
+						"user_id": userID,
+
+						"service":    "chat-service-chat_handler",
+						"request_id": "req-" + time.Now().Format("20060102-150405"),
+						"timestamp":  time.Now().Format(time.RFC3339Nano),
+						"message_id": msg.ID,
+					}).Warn("Timeout sending previous message to user channel")
+
+				default:
+					logrus.WithFields(logrus.Fields{
+						"user_id":    userID,
+						"service":    "chat-service-chat_handler",
+						"request_id": "req-123456", // Add a unique request ID if available
+						"timestamp":  time.Now().Format(time.RFC3339Nano),
+					}).Error("Message channel is full, unable to send previous messages")
+				}
+			}
+
+		}
+	}
 }
 
 func getClient(userID int) (*websocket.Conn, bool) {
@@ -158,27 +227,37 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 	h.ListenForMessages(userID, conn)
 
 }
-func (h *WebSocketHandler) ListenForMessages(userID int, conn *websocket.Conn) {
 
+// thsi function will read messages from the connection
+func (h *WebSocketHandler) ListenForMessages(userID int, conn *websocket.Conn) {
+	_, data, err := conn.ReadMessage()
+	log.Printf("the message from the connection %v", data)
+	if err != nil {
+		log.Printf("ffaileed message from the connection %v", err)
+	}
 	for {
 		var msg models.Message
 		if err := conn.ReadJSON(&msg); err != nil {
+			utils.Logger("Read the message from the connection in chat-handler ", err)
 			log.Printf("Read error from user %d: %v", userID, err)
-			break
-		}
 
+		}
+		log.Printf("rinting the messages%v", msg)
 		h.handleIncomingMessage(msg)
 	}
 }
 
 func (h *WebSocketHandler) handleIncomingMessage(msg models.Message) {
+	log.Printf(" printing the messages%v", msg)
+
 	if msg.ReceiverID <= 0 {
-		log.Printf("Invalid receiver ID: %d", msg.ReceiverID)
+		log.Printf("Invalid receiver ID from chat handler->handleincoming messgaes function: %d", msg.ReceiverID)
 		return
 	}
 	lock.Lock()
 	ch, ok := userschannel[msg.ReceiverID]
 	lock.Unlock()
+
 	if ok && ch != nil {
 		select {
 

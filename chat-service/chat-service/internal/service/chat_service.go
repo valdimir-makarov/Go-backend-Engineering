@@ -78,3 +78,13 @@ func (s *Service) MarkMessagesDelivered(messageIDs []uuid.UUID) {
 func (s *Service) GetGroupMemberIDs(groupID uuid.UUID) ([]int, error) {
 	return s.websocketService.GetGroupMemberIDs(groupID)
 }
+func (h *Service) GetPrevMessages(userID int, receiver_id int) ([]models.Message, error) {
+
+	messages, err := h.websocketService.GetPrevMessages(userID, receiver_id)
+	if err != nil {
+		log.Printf("Error retrieving previous messages: %v", err)
+
+	}
+	return messages, err
+
+}
