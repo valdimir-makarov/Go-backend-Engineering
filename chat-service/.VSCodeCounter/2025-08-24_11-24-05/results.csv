@@ -1,0 +1,13 @@
+"filename", "language", "JSON with Comments", "JSON", "TypeScript", "JavaScript", "comment", "blank", "total"
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/.mocharc.json", "JSON", 0, 5, 0, 0, 0, 0, 5
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/dist/server.d.ts", "TypeScript", 0, 0, 1, 0, 1, 0, 2
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/dist/server.js", "JavaScript", 0, 0, 0, 25, 4, 0, 29
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/dist/type.d.ts", "TypeScript", 0, 0, 9, 0, 1, 0, 10
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/dist/type.js", "JavaScript", 0, 0, 0, 1, 1, 0, 2
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/package-lock.json", "JSON", 0, 2165, 0, 0, 0, 1, 2166
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/package.json", "JSON", 0, 31, 0, 0, 0, 1, 32
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/src/CRDT.ts", "TypeScript", 0, 0, 54, 0, 20, 17, 91
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/src/server.ts", "TypeScript", 0, 0, 71, 0, 15, 35, 121
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/src/type.ts", "TypeScript", 0, 0, 11, 0, 0, 3, 14
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/tsconfig.json", "JSON with Comments", 22, 0, 0, 0, 0, 1, 23
+"Total", "-", 22, 2201, 146, 26, 42, 58, 2495

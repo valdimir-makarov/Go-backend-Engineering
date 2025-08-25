@@ -1,0 +1,28 @@
+"filename", "language", "JSON", "Properties", "YAML", "Go", "Go Checksum File", "MS SQL", "Go Module File", "Docker", "Makefile", "comment", "blank", "total"
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/.env", "Properties", 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/Dockerfile", "Docker", 0, 0, 0, 0, 0, 0, 0, 11, 0, 9, 11, 31
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/config/config.go", "Go", 0, 0, 0, 54, 0, 0, 0, 0, 0, 0, 9, 63
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/controllers/auth_controller.go", "Go", 0, 0, 0, 121, 0, 0, 0, 0, 0, 6, 23, 150
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/controllers/user_controller.go", "Go", 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 2
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/db/migrations/20250716210945_create_users_table.down.sql", "MS SQL", 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/db/migrations/20250716210945_create_users_table.up.sql", "MS SQL", 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 12
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/db/migrations/20250716211556_adding_Role_col.down.sql", "MS SQL", 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/db/migrations/20250716211556_adding_Role_col.up.sql", "MS SQL", 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/db/migrations/20250716211741_drop_users_table.down.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/db/migrations/20250716211741_drop_users_table.up.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/docker-compose.yml", "YAML", 0, 0, 20, 0, 0, 0, 0, 0, 0, 44, 8, 72
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/go.mod", "Go Module File", 0, 0, 0, 0, 0, 0, 56, 0, 0, 0, 6, 62
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/go.sum", "Go Checksum File", 0, 0, 0, 0, 177, 0, 0, 0, 0, 0, 1, 178
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/kafka/Kafka_prod.go", "Go", 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 11, 48
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/krakend.json", "JSON", 0, 0, 0, 0, 0, 0, 0, 0, 0, 69, 1, 70
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/main.go", "Go", 0, 0, 0, 49, 0, 0, 0, 0, 0, 10, 14, 73
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/makefile", "Makefile", 0, 0, 0, 0, 0, 0, 0, 0, 29, 5, 9, 43
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/middleware/auth_middleware.go", "Go", 0, 0, 0, 31, 0, 0, 0, 0, 0, 2, 8, 41
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/middleware/jwt.go", "Go", 0, 0, 0, 35, 0, 0, 0, 0, 0, 1, 8, 44
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/models/role.go", "Go", 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 2
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/models/user.go", "Go", 0, 0, 0, 16, 0, 0, 0, 0, 0, 4, 5, 25
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/repository/repo.go", "Go", 0, 0, 0, 70, 0, 0, 0, 0, 0, 10, 13, 93
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/routes/routes.go", "Go", 0, 0, 0, 11, 0, 0, 0, 0, 0, 1, 3, 15
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/utils/jwt.go", "Go", 0, 0, 0, 35, 0, 0, 0, 0, 0, 2, 12, 49
+"/home/bubun/Go-backend-Engineering/chat-service/Auth-Service/utils/password.go", "Go", 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 4, 14
+"Total", "-", 0, 5, 20, 471, 177, 15, 56, 11, 29, 163, 150, 1097

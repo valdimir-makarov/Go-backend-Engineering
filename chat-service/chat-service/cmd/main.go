@@ -15,57 +15,66 @@ import (
 	"google.golang.org/grpc"
 )
 
+// CORS middleware
+func CorsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	fmt.Println("✅ Chat service started")
 
 	brokers := []string{"localhost:9092"}
 	topic := "message-sent"
-	topic_2 := "user-status-changed"
+	topic2 := "user-status-changed"
 
 	repo := repository.NewWebSocketRepo()
 	srv := service.WebService(repo)
 
 	if srv == nil {
 		log.Fatal("❌ Service instance (srv) is nil after initialization!")
-	} else {
-		log.Println("✅ Service instance (srv) initialized successfully")
 	}
-	producer := kafkaPkg.NewKafkaProducer(brokers, topic, srv)
-	authProducer := authkafka.NewKafkaProducer(brokers, topic_2, srv)
+	log.Println("✅ Service instance (srv) initialized successfully")
 
+	producer := kafkaPkg.NewKafkaProducer(brokers, topic, srv)
+	authProducer := authkafka.NewKafkaProducer(brokers, topic2, srv)
+
+	mux := http.NewServeMux()
 	wsHandler := handler.NewWebSocketHandler(srv, producer, authProducer)
-	log.Printf("WebSocketHandler created: %+v", wsHandler)
-	log.Printf("WebSocketHandler created: %+v", wsHandler)
-	log.Printf("Service pointer inside handler: %p", wsHandler.HandleWebSocket)
 	fileHandler := handler.NewFileHandler(producer)
 
-	// Start Kafka consumer
+	// Kafka consumer
 	kafkaPkg.StartMessageConsumer(brokers, topic, repo)
 
-	// --- START gRPC server in a goroutine ---
+	// gRPC server
 	go func() {
 		grpcPort := ":50051"
 		listener, err := net.Listen("tcp", grpcPort)
 		if err != nil {
 			log.Fatalf("❌ Failed to listen on gRPC port: %v", err)
 		}
-
 		grpcServer := grpc.NewServer()
-		// grpcHandler := handler.NewServer(srv)
-		// generated.RegisterChatServiceServer(grpcServer, grpcHandler)
-
 		fmt.Println("🚀 gRPC server running on", grpcPort)
 		if err := grpcServer.Serve(listener); err != nil {
 			log.Fatalf("❌ Failed to serve gRPC: %v", err)
 		}
 	}()
-	// ----------------------------------------
 
-	// WebSocket & HTTP handlers
-	http.HandleFunc("/ws", wsHandler.HandleWebSocket)
-	http.HandleFunc("/wsfl", fileHandler.SendFileHandler)
-	http.HandleFunc("/wsgrpmsg", wsHandler.HandleGroupMessages)
-	http.HandleFunc("/prevMessages", wsHandler.FetchedPrevMessages2)
+	// Register routes **on mux**
+	mux.HandleFunc("/ws", wsHandler.HandleWebSocket)
+	mux.HandleFunc("/wsfl", fileHandler.SendFileHandler)
+	mux.HandleFunc("/wsgrpmsg", wsHandler.HandleGroupMessages)
+	mux.HandleFunc("/prevMessages", wsHandler.FetchedPrevMessages2)
 
 	port := os.Getenv("CHAT_SERVICE_PORT")
 	if port == "" {
@@ -73,5 +82,6 @@ func main() {
 	}
 
 	fmt.Printf("🌐 HTTP/WebSocket server running on :%s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	// Only run the server **once with middleware**
+	log.Fatal(http.ListenAndServe(":"+port, CorsMiddleware(mux)))
 }
