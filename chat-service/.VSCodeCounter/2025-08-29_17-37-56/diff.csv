@@ -1,0 +1,32 @@
+"filename", "language", "Go Module File", "JSON", "Go", "YAML", "JavaScript", "Go Checksum File", "Python", "JSON with Comments", "TypeScript", "comment", "blank", "total"
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/.mocharc.json", "JSON", 0, -5, 0, 0, 0, 0, 0, 0, 0, 0, 0, -5
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/dist/server.d.ts", "TypeScript", 0, 0, 0, 0, 0, 0, 0, 0, -1, -1, 0, -2
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/dist/server.js", "JavaScript", 0, 0, 0, 0, -25, 0, 0, 0, 0, -4, 0, -29
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/dist/type.d.ts", "TypeScript", 0, 0, 0, 0, 0, 0, 0, 0, -9, -1, 0, -10
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/dist/type.js", "JavaScript", 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, -2
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/package-lock.json", "JSON", 0, -2165, 0, 0, 0, 0, 0, 0, 0, 0, -1, -2166
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/package.json", "JSON", 0, -31, 0, 0, 0, 0, 0, 0, 0, 0, -1, -32
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/src/CRDT.ts", "TypeScript", 0, 0, 0, 0, 0, 0, 0, 0, -54, -20, -17, -91
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/src/server.ts", "TypeScript", 0, 0, 0, 0, 0, 0, 0, 0, -71, -15, -35, -121
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/src/type.ts", "TypeScript", 0, 0, 0, 0, 0, 0, 0, 0, -11, 0, -3, -14
+"/home/bubun/Go-backend-Engineering/chat-service/Text-Editor-Service/tsconfig.json", "JSON with Comments", 0, 0, 0, 0, 0, 0, 0, -22, 0, 0, -1, -23
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/CodeSanatizer.go", "Go", 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 9, 46
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/Dockerfile.go", "Go", 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 6
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/LRU/LRU.go", "Go", 0, 0, 31, 0, 0, 0, 0, 0, 0, 1, 9, 41
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/Pool/ContainerPools.go", "Go", 0, 0, 66, 0, 0, 0, 0, 0, 0, 23, 13, 102
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/api/main.go", "Go", 0, 0, 159, 0, 0, 0, 0, 0, 0, 3, 28, 190
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/docker-compose.yml", "YAML", 0, 0, 0, 77, 0, 0, 0, 0, 0, 0, 7, 84
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/go.go", "Go", 0, 0, 44, 0, 0, 0, 0, 0, 0, 6, 12, 62
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/go.mod", "Go Module File", 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 17
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/go.sum", "Go Checksum File", 0, 0, 0, 0, 0, 75, 0, 0, 0, 0, 1, 76
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/internal/models/models.go", "Go", 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 6, 30
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/kafka/kafka_con.go", "Go", 0, 0, 35, 0, 0, 0, 0, 0, 0, 4, 7, 46
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/kafka/kafka_prod.go", "Go", 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 11, 48
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/lang/language.go", "Go", 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 3, 15
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/payload.json", "JSON", 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/pkg/sanitizer.go", "Go", 0, 0, 35, 0, 0, 0, 0, 0, 0, 0, 7, 42
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/test.js", "JavaScript", 0, 0, 0, 0, 20, 0, 0, 0, 0, 0, 3, 23
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/worker/go_worker.go", "Go", 0, 0, 76, 0, 0, 0, 0, 0, 0, 0, 8, 84
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/worker/js_worker.js", "JavaScript", 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 3, 36
+"/home/bubun/Go-backend-Engineering/chat-service/code-executer-service/worker/python_worker.py", "Python", 0, 0, 0, 0, 0, 0, 32, 0, 0, 30, 15, 77
+"Total", "-", 12, -2200, 562, 77, 27, 75, 32, -22, -146, 25, 89, -1469
