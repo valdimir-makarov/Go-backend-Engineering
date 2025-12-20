@@ -1,3 +1,5 @@
+CREATE DATABASE auth_db;
+
 CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY,
     sender_id INT NOT NULL,

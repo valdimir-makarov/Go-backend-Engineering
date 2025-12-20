@@ -33,7 +33,7 @@ func (kp *KafkaProducer) PublishMessage(msg any) error {
 	if kp.Writer == nil {
 		return fmt.Errorf("kafka writer is nil %v", kp.Writer)
 	}
-	kp.service.SendMessages(msg.(models.Message).SenderID, msg.(models.Message).ReceiverID, msg.(models.Message).Content)
+	kp.service.SendMessages(msg.(models.Message).SenderID, msg.(models.Message).ReceiverID, msg.(models.Message).Content, msg.(models.Message).ID)
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return err

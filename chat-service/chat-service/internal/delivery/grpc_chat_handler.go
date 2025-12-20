@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/generated/github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/generated"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/service"
 	// "google.golang.org/grpc/codes"
@@ -22,7 +23,7 @@ type GRPCChatServer struct {
 // }
 func (s *GRPCChatServer) SendMessage(ctx context.Context, req *generated.ChatMessage) (*generated.Empty, error) {
 
-	s.svc.SendMessages(int(req.SenderId), int(req.ReceiverId), req.Content)
+	s.svc.SendMessages(int(req.SenderId), int(req.ReceiverId), req.Content, uuid.New())
 
 	// if err != nil {
 	// 	return nil, status.Errorf(codes.Internal, "Failed to send message yo service: %v", err)

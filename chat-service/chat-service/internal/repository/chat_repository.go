@@ -4,17 +4,17 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 
 	_ "github.com/lib/pq" // PostgreSQL driver
-	"github.com/sirupsen/logrus"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/config"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/models"
+	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/utils"
 )
 
 type Repository interface {
@@ -47,7 +47,7 @@ func NewWebSocketRepo() *WebSocketRepository {
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		log.Fatalf("DB connection error: %v", err)
+		utils.Fatal("DB connection error", zap.Error(err))
 	}
 
 	// Retry ping with updated err handling
@@ -57,14 +57,14 @@ func NewWebSocketRepo() *WebSocketRepository {
 		if pingErr == nil {
 			break
 		}
-		log.Printf("Failed to ping DB: %v. Retrying...", pingErr)
+		utils.Info("Failed to ping DB. Retrying...", zap.Error(pingErr))
 		time.Sleep(2 * time.Second)
 	}
 	if pingErr != nil {
-		log.Fatalf("Failed to connect to DB after retries: %v", pingErr)
+		utils.Fatal("Failed to connect to DB after retries", zap.Error(pingErr))
 	}
 
-	fmt.Println("Successfully connected to the database!")
+	utils.Info("Successfully connected to the database!")
 
 	return &WebSocketRepository{
 		Db:               db,
@@ -77,7 +77,7 @@ func (r *WebSocketRepository) AddClient(conn *websocket.Conn, userID int) (strin
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.ClientConnection[conn] = fmt.Sprintf("%d", userID)
-	log.Println("Client added")
+	utils.Info("Client added")
 	return "Client added successfully", nil
 }
 
@@ -87,7 +87,7 @@ func (r *WebSocketRepository) RemoveClient(conn *websocket.Conn) (string, error)
 	defer r.mu.Unlock()
 	userID := r.ClientConnection[conn]
 	delete(r.ClientConnection, conn)
-	log.Printf("Client removed: %s\n", userID)
+	utils.Info("Client removed", zap.String("user_id", userID))
 	return "Client removed", nil
 }
 
@@ -109,7 +109,7 @@ func (r *WebSocketRepository) BroadcastMessage(message []byte) (bool, error) {
 	for conn := range r.ClientConnection {
 		err := conn.WriteMessage(websocket.TextMessage, message)
 		if err != nil {
-			log.Printf("Error broadcasting message: %v\n", err)
+			utils.Error("Error broadcasting message", zap.Error(err))
 			conn.Close()
 			delete(r.ClientConnection, conn)
 			brErr = err
@@ -126,14 +126,14 @@ func (r *WebSocketRepository) SaveMessage(msg models.Message) error {
 		msg.ID = uuid.New()
 	}
 	if r.Db == nil {
-		logrus.Error("Database connection is nil")
+		utils.Error("Database connection is nil")
 		return errors.New("database connection is nil")
 	}
 	if msg.SenderID == 0 || msg.ReceiverID == 0 {
-		logrus.WithFields(logrus.Fields{
-			"sender_id":   msg.SenderID,
-			"receiver_id": msg.ReceiverID,
-		}).Error("Validation failed: sender_id and receiver_id must be non-zero integers")
+		utils.Error("Validation failed: sender_id and receiver_id must be non-zero integers",
+			zap.Int("sender_id", msg.SenderID),
+			zap.Int("receiver_id", msg.ReceiverID),
+		)
 		return errors.New("sender_id and receiver_id must be non-zero integers")
 	}
 
@@ -143,12 +143,15 @@ VALUES ($1, $2, $3, $4, $5)
 `
 	_, err := r.Db.Exec(query, msg.ID, msg.SenderID, msg.ReceiverID, msg.Content, msg.Delivered)
 	if err != nil {
-		logrus.WithError(err).Error("Failed to save message")
+		utils.Error("Failed to save message", zap.Error(err))
 		return fmt.Errorf("failed to save message: %w", err)
 	}
 
-	log.Printf("Message saved successfully: sender_id=%d, receiver_id=%d, content=%s\n", msg.SenderID, msg.ReceiverID, msg.Content)
-	logrus.Info("Message saved successfully")
+	utils.Info("Message saved successfully",
+		zap.Int("sender_id", msg.SenderID),
+		zap.Int("receiver_id", msg.ReceiverID),
+		zap.String("content", msg.Content),
+	)
 	return nil
 }
 
@@ -183,11 +186,11 @@ func (r *WebSocketRepository) MarkMessageAsDelivered(messageID uuid.UUID) error 
 	if messageID == uuid.Nil {
 		return nil
 	}
-	log.Printf("Marking message delivered: %s", messageID.String())
+	utils.Info("Marking message delivered", zap.String("message_id", messageID.String()))
 
 	_, err := r.Db.Exec("UPDATE messages SET delivered = true WHERE id = $1", messageID)
 	if err != nil {
-		log.Printf("Error marking message as delivered: %v", err)
+		utils.Error("Error marking message as delivered", zap.Error(err))
 	}
 	return err
 }
@@ -261,13 +264,11 @@ func (r *WebSocketRepository) GetPrevMessages(userID int, receiverID int) ([]mod
 func (r *WebSocketRepository) SetTheUserIDCompingFromTheAuthService(userID int) error {
 	// Validate userID and database connection
 	if r.Db == nil {
-		logrus.Error("Database connection is nil")
+		utils.Error("Database connection is nil")
 		return errors.New("database connection is nil")
 	}
 	if userID == 0 {
-		logrus.WithFields(logrus.Fields{
-			"user_id": userID,
-		}).Error("Validation failed: user_id must be a non-zero integer")
+		utils.Error("Validation failed: user_id must be a non-zero integer", zap.Int("user_id", userID))
 		return errors.New("user_id must be a non-zero integer")
 	}
 
@@ -280,26 +281,21 @@ func (r *WebSocketRepository) SetTheUserIDCompingFromTheAuthService(userID int) 
 	// Execute the query
 	result, err := r.Db.Exec(query, userID, time.Now())
 	if err != nil {
-		logrus.WithError(err).Error("Failed to insert user_id")
+		utils.Error("Failed to insert user_id", zap.Error(err))
 		return fmt.Errorf("failed to insert user_id %d: %w", userID, err)
 	}
 
 	// Check rows affected to determine success
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		logrus.WithError(err).Error("Failed to get rows affected")
+		utils.Error("Failed to get rows affected", zap.Error(err))
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 
 	if rowsAffected > 0 {
-		log.Printf("User saved successfully: user_id=%d\n", userID)
-		logrus.WithFields(logrus.Fields{
-			"user_id": userID,
-		}).Info("User saved successfully")
+		utils.Info("User saved successfully", zap.Int("user_id", userID))
 	} else {
-		logrus.WithFields(logrus.Fields{
-			"user_id": userID,
-		}).Info("User already exists in users table")
+		utils.Info("User already exists in users table", zap.Int("user_id", userID))
 	}
 
 	return nil

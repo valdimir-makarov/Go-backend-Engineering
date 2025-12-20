@@ -1,43 +1,66 @@
 package utils
 
 import (
+	"sync"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-func Logger(msg string, err error) {
-	// Configure zap to include caller information and stack traces
-	config := zap.NewProductionConfig()
-	config.EncoderConfig.TimeKey = "timestamp"
-	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	config.EncoderConfig.StacktraceKey = "stacktrace"
-	config.EncoderConfig.CallerKey = "caller"
-	config.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder // Shows file:line
+var (
+	logger *zap.Logger
+	once   sync.Once
+)
 
-	// Create a new logger with the configured options
-	logger, err := config.Build(zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
-	if err != nil {
-		// Fallback to a basic logger if configuration fails
-		zap.NewExample().Sugar().Panicf("Failed to initialize logger: %v", err)
-		return
+// InitLogger initializes the global logger instance
+func InitLogger() {
+	once.Do(func() {
+		config := zap.NewProductionConfig()
+		config.EncoderConfig.TimeKey = "timestamp"
+		config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+		config.EncoderConfig.StacktraceKey = "stacktrace"
+		config.EncoderConfig.CallerKey = "caller"
+		config.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
+
+		var err error
+		logger, err = config.Build(zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
+		if err != nil {
+			panic(err)
+		}
+	})
+}
+
+// GetLogger returns the global logger instance
+func GetLogger() *zap.Logger {
+	if logger == nil {
+		InitLogger()
 	}
-	defer logger.Sync() // Flushes buffer, if any
+	return logger
+}
 
-	// Use SugaredLogger for simpler API
-	sugar := logger.Sugar()
+// Info logs an info message
+func Info(msg string, fields ...zap.Field) {
+	GetLogger().Info(msg, fields...)
+}
 
-	// Log the error with file, line, message, and full error description
-	sugar.Infow("Error occurred",
-		"message", msg,
-		"error", err,
-		"caller", zapcore.EntryCaller{}, // Automatically includes file:line
-	)
+// Error logs an error message
+func Error(msg string, fields ...zap.Field) {
+	GetLogger().Error(msg, fields...)
+}
 
-	// If no error is provided, log only the message with caller
-	if err == nil {
-		sugar.Infow("Info message",
-			"message", msg,
-			"caller", zapcore.EntryCaller{},
-		)
+// Debug logs a debug message
+func Debug(msg string, fields ...zap.Field) {
+	GetLogger().Debug(msg, fields...)
+}
+
+// Fatal logs a fatal message and exits
+func Fatal(msg string, fields ...zap.Field) {
+	GetLogger().Fatal(msg, fields...)
+}
+
+// Sync flushes any buffered log entries
+func Sync() {
+	if logger != nil {
+		logger.Sync()
 	}
 }

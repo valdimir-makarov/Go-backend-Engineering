@@ -8,8 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka"
 	authkafka "github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/kafka/Auth_kafka"
@@ -40,12 +39,12 @@ func (h *WebSocketHandler) addClient(userID int, conn *websocket.Conn) {
 	clients[userID] = conn
 	lock.Unlock()
 	if clients[userID] != nil {
-		log.Printf("Client %d connected successfully", userID)
+		utils.Info("Client connected successfully", zap.Int("user_id", userID))
 		//fetched the  previous messages for the user
 
 	}
 	if h.handler == nil {
-		log.Println("WebSocketHandler's service is nil! Cannot send message")
+		utils.Error("WebSocketHandler's service is nil! Cannot send message")
 
 	}
 
@@ -56,22 +55,15 @@ func (h *WebSocketHandler) addClient(userID int, conn *websocket.Conn) {
 
 	//create a go routine per useer
 	go func() {
-		// for msg := range msgchannel {
-		// 	err := conn.WriteJSON(msg)
-		// 	if err != nil {
-		// 		log.Printf("Write to user error %d : %v", userID, err)
-
-		// 	}
-		// }
 		for msg := range msgchannel {
 
 			err := conn.WriteJSON(msg)
 			if err != nil {
 				if websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-					log.Printf("Connection closed for %d: %v", userID, err)
+					utils.Info("Connection closed", zap.Int("user_id", userID), zap.Error(err))
 					break // This is a permanent close
 				}
-				log.Printf("Temporary write error for %d: %v", userID, err)
+				utils.Error("Temporary write error", zap.Int("user_id", userID), zap.Error(err))
 				continue // Skip just this message, keep the connection alive
 			}
 		}
@@ -107,13 +99,13 @@ func (h *WebSocketHandler) FetchedPrevMessages(userID int, receiver_id int) {
 		ch, ok := userschannel[userID]
 		lock.Unlock()
 		if err != nil {
-			logrus.WithFields(logrus.Fields{
-				"user_id":    userID,
-				"service":    "chat-service-chat_handler",
-				"request_id": "req-123456", // Add a unique request ID if available
-				"timestamp":  time.Now().Format(time.RFC3339Nano),
-			}).Error("Error fetching previous messages for bububn userrrsfgfggfgsdsdsdsdsdsdsdsdrrdsdsdsdsdsdrrrrrrrrrrrrrrrrrr 2222222222", err)
-			log.Printf("what is the error %v ", err)
+			utils.Error("Error fetching previous messages",
+				zap.Int("user_id", userID),
+				zap.String("service", "chat-service-chat_handler"),
+				zap.String("request_id", "req-123456"),
+				zap.String("timestamp", time.Now().Format(time.RFC3339Nano)),
+				zap.Error(err),
+			)
 		}
 
 		if ok && ch != nil {
@@ -121,29 +113,28 @@ func (h *WebSocketHandler) FetchedPrevMessages(userID int, receiver_id int) {
 			for _, msg := range messages {
 				select {
 				case ch <- msg:
-					logrus.WithFields(logrus.Fields{
-						"user_id":    userID,
-						"service":    "chat-service-chat_handler",
-						"request_id": "req-123456", // Add a unique request ID if available
-						"timestamp":  time.Now().Format(time.RFC3339Nano),
-					}).Info("Previous messages sent to user")
+					utils.Info("Previous messages sent to user",
+						zap.Int("user_id", userID),
+						zap.String("service", "chat-service-chat_handler"),
+						zap.String("request_id", "req-123456"),
+						zap.String("timestamp", time.Now().Format(time.RFC3339Nano)),
+					)
 				case <-time.After(1 * time.Second): // Timeout to prevent blocking
-					logrus.WithFields(logrus.Fields{
-						"user_id": userID,
-
-						"service":    "chat-service-chat_handler",
-						"request_id": "req-" + time.Now().Format("20060102-150405"),
-						"timestamp":  time.Now().Format(time.RFC3339Nano),
-						"message_id": msg.ID,
-					}).Warn("Timeout sending previous message to user channel")
+					utils.Info("Timeout sending previous message to user channel",
+						zap.Int("user_id", userID),
+						zap.String("service", "chat-service-chat_handler"),
+						zap.String("request_id", "req-"+time.Now().Format("20060102-150405")),
+						zap.String("timestamp", time.Now().Format(time.RFC3339Nano)),
+						zap.String("message_id", msg.ID.String()),
+					)
 
 				default:
-					logrus.WithFields(logrus.Fields{
-						"user_id":    userID,
-						"service":    "chat-service-chat_handler",
-						"request_id": "req-123456", // Add a unique request ID if available
-						"timestamp":  time.Now().Format(time.RFC3339Nano),
-					}).Error("Message channel is full, unable to send previous messages")
+					utils.Error("Message channel is full, unable to send previous messages",
+						zap.Int("user_id", userID),
+						zap.String("service", "chat-service-chat_handler"),
+						zap.String("request_id", "req-123456"),
+						zap.String("timestamp", time.Now().Format(time.RFC3339Nano)),
+					)
 				}
 			}
 
@@ -159,19 +150,19 @@ func getClient(userID int) (*websocket.Conn, bool) {
 }
 func (h *WebSocketHandler) sendPendingMessages(userID int, conn *websocket.Conn) {
 	messages, err := h.handler.GetPendingMessages(userID)
-	log.Printf("messages: %+v", messages)
+	utils.Info("messages", zap.Any("messages", messages))
 	if err != nil {
-		log.Printf("Error fetching pending messages for user %d: %v", userID, err)
+		utils.Error("Error fetching pending messages for user", zap.Int("user_id", userID), zap.Error(err))
 		return
 	}
 
 	var messageIDs []uuid.UUID
 	for _, msg := range messages {
 		if err := conn.WriteJSON(msg); err != nil {
-			log.Printf("Error sending pending message to user %d: %v", userID, err)
+			utils.Error("Error sending pending message to user", zap.Int("user_id", userID), zap.Error(err))
 			continue
 		}
-		log.Printf("the message ID: %v", msg.ID) // %v will print UUID properly as string
+		utils.Info("the message ID", zap.String("message_id", msg.ID.String()))
 		messageIDs = append(messageIDs, msg.ID)
 	}
 
@@ -182,17 +173,17 @@ func (h *WebSocketHandler) sendPendingMessages(userID int, conn *websocket.Conn)
 func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if token == "" {
-		log.WithFields(log.Fields{
-			"service": "chat-service",
-			"error":   "missing JWT token",
-		}).Error("WebSocket rejected: no token")
+		utils.Error("WebSocket rejected: no token",
+			zap.String("service", "chat-service"),
+			zap.String("error", "missing JWT token"),
+		)
 		http.Error(w, "Missing token", http.StatusBadRequest)
 		return
 	}
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("WebSocket upgrade error: %v", err)
+		utils.Error("WebSocket upgrade error", zap.Error(err))
 		http.Error(w, "WebSocket upgrade failed", http.StatusInternalServerError)
 		return
 	}
@@ -221,7 +212,7 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 		lock.Unlock()
 		conn.Close()
 		h.kafkaProducerAuth.SendUserStatusEvent(userIDStr, "UserLoggedOut")
-		log.Printf("Connection closed for user %d", userID)
+		utils.Info("Connection closed for user", zap.Int("user_id", userID))
 	}()
 
 	h.ListenForMessages(userID, conn)
@@ -231,66 +222,73 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 // thsi function will read messages from the connection
 func (h *WebSocketHandler) ListenForMessages(userID int, conn *websocket.Conn) {
 	_, data, err := conn.ReadMessage()
-	log.Printf("the message from the connection %v", data)
+	utils.Info("the message from the connection", zap.ByteString("data", data))
 	if err != nil {
-		log.Printf("ffaileed message from the connection %v", err)
+		utils.Error("failed message from the connection", zap.Error(err))
 	}
 	for {
 		var msg models.Message
 		if err := conn.ReadJSON(&msg); err != nil {
-			utils.Logger("Read the message from the connection in chat-handler ", err)
-			log.Printf("Read error from user %d: %v", userID, err)
+			utils.Error("Read the message from the connection in chat-handler", zap.Error(err))
+			utils.Error("Read error from user", zap.Int("user_id", userID), zap.Error(err))
 
 		}
-		log.Printf("rinting the messages%v", msg)
+		utils.Info("printing the messages", zap.Any("msg", msg))
 		h.handleIncomingMessage(msg)
 	}
 }
 
 func (h *WebSocketHandler) handleIncomingMessage(msg models.Message) {
-	log.Printf(" printing the messages%v", msg)
+	utils.Info("printing the messages", zap.Any("msg", msg))
 
 	if msg.ReceiverID <= 0 {
-		log.Printf("Invalid receiver ID from chat handler->handleincoming messgaes function: %d", msg.ReceiverID)
+		utils.Error("Invalid receiver ID from chat handler->handleincoming messgaes function", zap.Int("receiver_id", msg.ReceiverID))
 		return
 	}
+
+	// Always save and publish the message first to ensure it's persisted and has an ID
+	// We need to capture the saved message (with ID) to send it to the websocket
+	// Refactoring saveAndPublishMessage to return the saved message or ID would be better,
+	// but for now let's manually generate ID if missing and save.
+
+	if msg.ID == uuid.Nil {
+		msg.ID = uuid.New()
+	}
+
+	// Save to DB
+	if h.handler != nil {
+		// SendMessages saves to DB. We should probably use a method that returns the saved msg or error,
+		// but SendMessages currently just logs errors.
+		// Let's rely on SendMessages to save.
+		h.handler.SendMessages(msg.SenderID, msg.ReceiverID, msg.Content, msg.ID)
+	}
+
+	// Publish to Kafka
+	if h.kafkaProducer != nil {
+		h.kafkaProducer.PublishMessage(msg)
+	}
+
 	lock.Lock()
 	ch, ok := userschannel[msg.ReceiverID]
 	lock.Unlock()
 
 	if ok && ch != nil {
 		select {
-
 		case ch <- msg:
-			log.Printf("message Queued %v ", msg.ReceiverID)
+			utils.Info("message Queued", zap.Int("receiver_id", msg.ReceiverID))
 		default:
-			log.Printf("the message Queue is full /handleincomingmessages->chat_handler.go")
-			h.saveAndPublishMessage(msg)
+			utils.Info("the message Queue is full /handleincomingmessages->chat_handler.go")
+			// Message is already saved/published above, so we don't need to do it again here
 		}
-
-	} else {
-		h.saveAndPublishMessage(msg)
 	}
-
-	// if receiverConn, exists := getClient(msg.ReceiverID); exists {
-	// 	go func() {
-	// 		if err := receiverConn.WriteJSON(msg); err != nil {
-	// 			log.Printf("Failed to send message to user %d: %v", msg.ReceiverID, err)
-	// 		}
-
-	// 	}()
-	// 	log.Printf("Message sent to user %d", msg.ReceiverID)
-	// } else {
-
-	// }
 }
 
 func (h *WebSocketHandler) saveAndPublishMessage(msg models.Message) {
 	if h.handler == nil {
-		log.Println("Error: handler is nil in saveAndPublishMessage")
+		utils.Error("Error: handler is nil in saveAndPublishMessage")
 
 	}
-	h.handler.SendMessages(msg.SenderID, msg.ReceiverID, msg.Content)
+	h.handler.SendMessages(msg.SenderID, msg.ReceiverID, msg.Content, uuid.New())
 	h.kafkaProducer.PublishMessage(models.Message{
 		ID:         uuid.New(),
 		SenderID:   msg.SenderID,
@@ -298,30 +296,27 @@ func (h *WebSocketHandler) saveAndPublishMessage(msg models.Message) {
 		Content:    msg.Content,
 		Delivered:  false,
 	})
-	// if err != nil {
-	// 	log.Printf("Error saving message for user %d: %v", msg.ReceiverID, err)
-	// 	return
-	// }
-	log.Printf("Message saved for user %d", msg.ReceiverID)
+
+	utils.Info("Message saved for user", zap.Int("receiver_id", msg.ReceiverID))
 }
 
 func (h *WebSocketHandler) HandleGroupMessages(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"service": "chat-service",
-			"error":   " group messages connect no upgraded",
-		}).Error("WebSocket rejected: upgradation failed")
+		utils.Error("WebSocket rejected: upgradation failed",
+			zap.String("service", "chat-service"),
+			zap.String("error", " group messages connect no upgraded"),
+		)
 		http.Error(w, "Missing token", http.StatusBadRequest)
 		return
 	}
 
 	userIdStr := r.URL.Query().Get("user_id")
 	if userIdStr == "" {
-		log.WithFields(log.Fields{
-			"service": "chat-service",
-			"error":   "  idnt get the user id",
-		}).Error("WebSocket rejected:  failed to get thw user id for group chat")
+		utils.Error("WebSocket rejected:  failed to get thw user id for group chat",
+			zap.String("service", "chat-service"),
+			zap.String("error", "  idnt get the user id"),
+		)
 		http.Error(w, "Missing token", http.StatusBadRequest)
 		return
 	}
@@ -332,14 +327,14 @@ func (h *WebSocketHandler) HandleGroupMessages(w http.ResponseWriter, r *http.Re
 	defer func() {
 		removeClient(userID)
 		conn.Close()
-		log.Printf("Connection closed for user %d", userID)
+		utils.Info("Connection closed for user", zap.Int("user_id", userID))
 	}()
-	log.Printf("User %d connected to group WebSocket", userID)
+	utils.Info("User connected to group WebSocket", zap.Int("user_id", userID))
 	//go routine for the Client Read
 	for {
 		var msg models.Message
 		if err := conn.ReadJSON(&msg); err != nil {
-			log.Printf("Read error from user %d: %v", userID, err)
+			utils.Error("Read error from user", zap.Int("user_id", userID), zap.Error(err))
 			break
 		}
 
@@ -348,7 +343,7 @@ func (h *WebSocketHandler) HandleGroupMessages(w http.ResponseWriter, r *http.Re
 }
 func (h *WebSocketHandler) handleGroupMessage(msg models.Message) {
 	if msg.GroupID == nil {
-		log.Println("GroupID missing in group message")
+		utils.Error("GroupID missing in group message")
 		return
 	}
 

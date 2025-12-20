@@ -1,23 +1,24 @@
 'use client';
 import React, { useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import MessageBubble from '@/components/MessageBubble';
 import MessageInput from '@/components/MessageInput';
 import ChatSidebar from '@/components/ChatSidebar';
 import ChatHeader from '@/components/ChatHeader';
+import ConversationSummary from '@/components/ConversationSummary';
 import { useAppDispatch, useAppSelector } from '@/lib/hooks';
 import { sendMessage, setActiveChat } from '@/lib/features/chat/chatSlice';
 
-import ConversationSummary from '@/components/ConversationSummary';
-import { useState } from 'react';
-
-// ... imports
-
 const ChatPage = () => {
   const params = useParams();
+  const searchParams = useSearchParams();
   const chatId = params?.chatId as string;
   const dispatch = useAppDispatch();
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+
+  // Get current user ID from query param or default to 2
+  const currentUserId = parseInt(searchParams.get('uid') || '2');
 
   // Select messages for the current chat from Redux store
   const messages = useAppSelector((state) => state.chat.messages[chatId] || []);
@@ -26,7 +27,27 @@ const ChatPage = () => {
     if (chatId) {
       dispatch(setActiveChat(chatId));
     }
-  }, [chatId, dispatch]);
+
+    // Connect to WebSocket with dynamic user ID
+    dispatch({
+      type: 'chat/connect',
+      payload: {
+        userId: currentUserId,
+        token: 'mock-token'
+      }
+    });
+
+    // Also update current user in store so sendMessage knows who is sending
+    dispatch({
+      type: 'chat/setCurrentUser',
+      payload: { id: currentUserId, name: `User ${currentUserId}` }
+    });
+
+    return () => {
+      // Optional: disconnect on unmount if desired, but usually we keep it open
+      // dispatch({ type: 'chat/disconnect' });
+    };
+  }, [chatId, dispatch, currentUserId]);
 
   const handleSend = (text: string) => {
     dispatch(sendMessage({ chatId, message: text }));

@@ -1,11 +1,10 @@
 package service
 
 import (
-	"log"
-
 	"github.com/google/uuid"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/models"
 	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/internal/repository"
+	"github.com/valdimir-makarov/Go-backend-Engineering/chat-service/chat-service/utils"
 	"go.uber.org/zap"
 )
 
@@ -22,17 +21,15 @@ func WebService(repo repository.Repository) *Service {
 
 // SendMessages sends a message from the sender to the receiver.
 // If the receiver is offline, the message is saved in the database.
-func (s *Service) SendMessages(senderID, receiverID int, content string) {
-	// Use a globally injected logger instead of initializing a new one each time
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-
+func (s *Service) SendMessages(senderID, receiverID int, content string, messageID uuid.UUID) {
 	// Create the message
-	id := uuid.New()
-	log.Println("Generated UUID:", id)
+	if messageID == uuid.Nil {
+		messageID = uuid.New()
+	}
+	utils.Info("Using UUID", zap.String("uuid", messageID.String()))
 
 	message := models.Message{
-		ID:         uuid.New(), // Generates a valid UUID
+		ID:         messageID,
 		SenderID:   senderID,
 		ReceiverID: receiverID,
 		Content:    content,
@@ -41,7 +38,7 @@ func (s *Service) SendMessages(senderID, receiverID int, content string) {
 	}
 
 	// Log message details
-	logger.Info("Saving message",
+	utils.Info("Saving message",
 		zap.String("id", message.ID.String()),
 		zap.Int("sender_id", message.SenderID),
 		zap.Int("receiver_id", message.ReceiverID),
@@ -50,12 +47,10 @@ func (s *Service) SendMessages(senderID, receiverID int, content string) {
 
 	// Save the message to the database
 	if err := s.websocketService.SaveMessage(message); err != nil {
-		logger.Error("Failed to save message", zap.Error(err))
-
+		utils.Error("Failed to save message", zap.Error(err))
 	}
 
-	logger.Info("Message saved successfully", zap.String("id", message.ID.String()))
-
+	utils.Info("Message saved successfully", zap.String("id", message.ID.String()))
 }
 
 // GetPendingMessages retrieves all undelivered messages for a receiver.
@@ -82,8 +77,7 @@ func (h *Service) GetPrevMessages(userID int, receiver_id int) ([]models.Message
 
 	messages, err := h.websocketService.GetPrevMessages(userID, receiver_id)
 	if err != nil {
-		log.Printf("Error retrieving previous messages: %v", err)
-
+		utils.Error("Error retrieving previous messages", zap.Error(err))
 	}
 	return messages, err
 
