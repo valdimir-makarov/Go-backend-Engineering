@@ -4,9 +4,10 @@ interface ChatHeaderProps {
     chatName: string;
     status?: string;
     avatar?: string;
+    onToggleSummary?: () => void;
 }
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ chatName, status = 'Online', avatar }) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({ chatName, status = 'Online', avatar, onToggleSummary }) => {
     return (
         <div className="h-16 border-b border-gray-200 bg-white flex items-center px-6 justify-between shadow-sm z-10">
             <div className="flex items-center">
@@ -33,7 +34,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ chatName, status = 'Online', av
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                 </button>
-                <button className="hover:text-blue-600 transition-colors">
+                <button
+                    onClick={onToggleSummary}
+                    className="hover:text-blue-600 transition-colors"
+                    title="Conversation Insights"
+                >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
