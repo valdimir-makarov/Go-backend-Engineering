@@ -1,6 +1,0 @@
-@KestrelDemo_HostAddress = http://localhost:5015
-
-GET {{KestrelDemo_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
