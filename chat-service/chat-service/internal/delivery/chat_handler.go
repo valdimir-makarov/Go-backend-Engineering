@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -25,14 +26,26 @@ var (
 	lock = sync.RWMutex{}
 )
 
+type MessageStrategy interface {
+	Handle(h *WebSocketHandler, msg models.Message) error
+}
+
 type WebSocketHandler struct {
 	handler           *service.Service
 	kafkaProducer     *kafka.KafkaProducer
 	kafkaProducerAuth *authkafka.KafkaProducer
+	strategies        map[string]MessageStrategy // New field
 }
 
 func NewWebSocketHandler(svc *service.Service, producer *kafka.KafkaProducer, authProducer *authkafka.KafkaProducer) *WebSocketHandler {
-	return &WebSocketHandler{handler: svc, kafkaProducer: producer, kafkaProducerAuth: authProducer}
+	h := &WebSocketHandler{handler: svc, kafkaProducer: producer, kafkaProducerAuth: authProducer,
+		strategies: make(map[string]MessageStrategy),
+	}
+	h.strategies["private"] = &PrivateMessageStrategy{}
+	h.strategies["group"] = &GroupMessageStrategy{}
+
+	return h
+
 }
 func (h *WebSocketHandler) addClient(userID int, conn *websocket.Conn) {
 	lock.Lock()
@@ -234,32 +247,72 @@ func (h *WebSocketHandler) ListenForMessages(userID int, conn *websocket.Conn) {
 
 		}
 		utils.Info("printing the messages", zap.Any("msg", msg))
-		h.handleIncomingMessage(msg)
+		// h.handleIncomingMessage(msg)
+		h.processMessage(msg)
 	}
 }
 
-func (h *WebSocketHandler) handleIncomingMessage(msg models.Message) {
-	utils.Info("printing the messages", zap.Any("msg", msg))
+// func (h *WebSocketHandler) handleIncomingMessage(msg models.Message) {
+// 	utils.Info("printing the messages", zap.Any("msg", msg))
 
+// 	if msg.ReceiverID <= 0 {
+// 		utils.Error("Invalid receiver ID from chat handler->handleincoming messgaes function", zap.Int("receiver_id", msg.ReceiverID))
+// 		return
+// 	}
+
+// 	// Always save and publish the message first to ensure it's persisted and has an ID
+// 	// We need to capture the saved message (with ID) to send it to the websocket
+// 	// Refactoring saveAndPublishMessage to return the saved message or ID would be better,
+// 	// but for now let's manually generate ID if missing and save.
+
+// 	if msg.ID == uuid.Nil {
+// 		msg.ID = uuid.New()
+// 	}
+
+// 	// Save to DB
+// 	if h.handler != nil {
+// 		// SendMessages saves to DB. We should probably use a method that returns the saved msg or error,
+// 		// but SendMessages currently just logs errors.
+// 		// Let's rely on SendMessages to save.
+// 		h.handler.SendMessages(msg.SenderID, msg.ReceiverID, msg.Content, msg.ID)
+// 	}
+
+// 	// Publish to Kafka
+// 	if h.kafkaProducer != nil {
+// 		h.kafkaProducer.PublishMessage(msg)
+// 	}
+
+// 	lock.Lock()
+// 	ch, ok := userschannel[msg.ReceiverID]
+// 	lock.Unlock()
+
+// 	if ok && ch != nil {
+// 		select {
+// 		case ch <- msg:
+// 			utils.Info("message Queued", zap.Int("receiver_id", msg.ReceiverID))
+// 		default:
+// 			utils.Info("the message Queue is full /handleincomingmessages->chat_handler.go")
+// 			// Message is already saved/published above, so we don't need to do it again here
+// 		}
+// 	}
+// }
+
+type PrivateMessageStrategy struct{}
+
+func (PrvMsg *PrivateMessageStrategy) Handle(h *WebSocketHandler, msg models.Message) error {
 	if msg.ReceiverID <= 0 {
 		utils.Error("Invalid receiver ID from chat handler->handleincoming messgaes function", zap.Int("receiver_id", msg.ReceiverID))
-		return
+		return fmt.Errorf("invalid receiver ID: %d", msg.ReceiverID)
 	}
-
-	// Always save and publish the message first to ensure it's persisted and has an ID
-	// We need to capture the saved message (with ID) to send it to the websocket
-	// Refactoring saveAndPublishMessage to return the saved message or ID would be better,
-	// but for now let's manually generate ID if missing and save.
-
-	if msg.ID == uuid.Nil {
-		msg.ID = uuid.New()
+	if msg.SenderID <= 0 {
+		utils.Error("Invalid sender ID from chat handler->handleincoming messgaes function", zap.Int("sender_id", msg.SenderID))
+		return fmt.Errorf("invalid sender ID: %d", msg.SenderID)
 	}
-
-	// Save to DB
+	if msg.Content == " " {
+		utils.Error("Invalid content from chat handler->handleincoming messgaes function", zap.String("content", msg.Content))
+		return fmt.Errorf("invalid content")
+	}
 	if h.handler != nil {
-		// SendMessages saves to DB. We should probably use a method that returns the saved msg or error,
-		// but SendMessages currently just logs errors.
-		// Let's rely on SendMessages to save.
 		h.handler.SendMessages(msg.SenderID, msg.ReceiverID, msg.Content, msg.ID)
 	}
 
@@ -268,21 +321,48 @@ func (h *WebSocketHandler) handleIncomingMessage(msg models.Message) {
 		h.kafkaProducer.PublishMessage(msg)
 	}
 
-	lock.Lock()
+	lock.RLock()
 	ch, ok := userschannel[msg.ReceiverID]
-	lock.Unlock()
+
+	lock.RUnlock()
 
 	if ok && ch != nil {
 		select {
 		case ch <- msg:
-			utils.Info("message Queued", zap.Int("receiver_id", msg.ReceiverID))
+			utils.Info("Private message queued", zap.Int("receiver_id", msg.ReceiverID))
 		default:
-			utils.Info("the message Queue is full /handleincomingmessages->chat_handler.go")
-			// Message is already saved/published above, so we don't need to do it again here
+			utils.Info("Queue full for receiver", zap.Int("receiver_id", msg.ReceiverID))
 		}
 	}
+	return nil
+
 }
 
+type GroupMessageStrategy struct{}
+
+func (s *GroupMessageStrategy) Handle(h *WebSocketHandler, msg models.Message) error {
+	if msg.GroupID == nil {
+		return fmt.Errorf("GroupID missing in group message")
+	}
+
+	memberIDs, err := h.handler.GetGroupMemberIDs(*msg.GroupID)
+	if err != nil {
+		return err
+	}
+
+	for _, uid := range memberIDs {
+		if uid == msg.SenderID {
+			continue
+		}
+		lock.RLock()
+		ch, ok := userschannel[uid]
+		lock.RUnlock()
+		if ok {
+			ch <- msg
+		}
+	}
+	return nil
+}
 func (h *WebSocketHandler) saveAndPublishMessage(msg models.Message) {
 	if h.handler == nil {
 		utils.Error("Error: handler is nil in saveAndPublishMessage")
@@ -300,63 +380,80 @@ func (h *WebSocketHandler) saveAndPublishMessage(msg models.Message) {
 	utils.Info("Message saved for user", zap.Int("receiver_id", msg.ReceiverID))
 }
 
-func (h *WebSocketHandler) HandleGroupMessages(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		utils.Error("WebSocket rejected: upgradation failed",
-			zap.String("service", "chat-service"),
-			zap.String("error", " group messages connect no upgraded"),
-		)
-		http.Error(w, "Missing token", http.StatusBadRequest)
-		return
+// func (h *WebSocketHandler) HandleGroupMessages(w http.ResponseWriter, r *http.Request) {
+// 	conn, err := upgrader.Upgrade(w, r, nil)
+// 	if err != nil {
+// 		utils.Error("WebSocket rejected: upgradation failed",
+// 			zap.String("service", "chat-service"),
+// 			zap.String("error", " group messages connect no upgraded"),
+// 		)
+// 		http.Error(w, "Missing token", http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	userIdStr := r.URL.Query().Get("user_id")
+// 	if userIdStr == "" {
+// 		utils.Error("WebSocket rejected:  failed to get thw user id for group chat",
+// 			zap.String("service", "chat-service"),
+// 			zap.String("error", "  idnt get the user id"),
+// 		)
+// 		http.Error(w, "Missing token", http.StatusBadRequest)
+// 		return
+// 	}
+// 	userID, err := strconv.Atoi(userIdStr)
+// 	h.kafkaProducerAuth.SendUserStatusEvent(userIdStr, "UserLoggedIn")
+// 	h.addClient(userID, conn)
+
+// 	defer func() {
+// 		removeClient(userID)
+// 		conn.Close()
+// 		utils.Info("Connection closed for user", zap.Int("user_id", userID))
+// 	}()
+// 	utils.Info("User connected to group WebSocket", zap.Int("user_id", userID))
+// 	//go routine for the Client Read
+// 	for {
+// 		var msg models.Message
+// 		if err := conn.ReadJSON(&msg); err != nil {
+// 			utils.Error("Read error from user", zap.Int("user_id", userID), zap.Error(err))
+// 			break
+// 		}
+
+// 		h.handleGroupMessage(msg)
+// 	}
+// }
+// func (h *WebSocketHandler) handleGroupMessage(msg models.Message) {
+// 	if msg.GroupID == nil {
+// 		utils.Error("GroupID missing in group message")
+// 		return
+// 	}
+
+//		memberIDs, _ := h.handler.GetGroupMemberIDs(*msg.GroupID)
+//		for _, uid := range memberIDs {
+//			if uid == msg.SenderID {
+//				continue
+//			}
+//			lock.RLock()
+//			ch, ok := userschannel[uid]
+//			lock.RUnlock()
+//			if ok {
+//				ch <- msg
+//			}
+//		}
+//	}
+func (h *WebSocketHandler) processMessage(msg models.Message) {
+	var strategyKey string
+	if msg.GroupID != nil {
+		strategyKey = "group"
+	} else {
+		strategyKey = "private"
 	}
 
-	userIdStr := r.URL.Query().Get("user_id")
-	if userIdStr == "" {
-		utils.Error("WebSocket rejected:  failed to get thw user id for group chat",
-			zap.String("service", "chat-service"),
-			zap.String("error", "  idnt get the user id"),
-		)
-		http.Error(w, "Missing token", http.StatusBadRequest)
-		return
-	}
-	userID, err := strconv.Atoi(userIdStr)
-	h.kafkaProducerAuth.SendUserStatusEvent(userIdStr, "UserLoggedIn")
-	h.addClient(userID, conn)
-
-	defer func() {
-		removeClient(userID)
-		conn.Close()
-		utils.Info("Connection closed for user", zap.Int("user_id", userID))
-	}()
-	utils.Info("User connected to group WebSocket", zap.Int("user_id", userID))
-	//go routine for the Client Read
-	for {
-		var msg models.Message
-		if err := conn.ReadJSON(&msg); err != nil {
-			utils.Error("Read error from user", zap.Int("user_id", userID), zap.Error(err))
-			break
+	if strategy, ok := h.strategies[strategyKey]; ok {
+		err := strategy.Handle(h, msg)
+		if err != nil {
+			utils.Error("Strategy execution failed", zap.Error(err))
 		}
-
-		h.handleGroupMessage(msg)
-	}
-}
-func (h *WebSocketHandler) handleGroupMessage(msg models.Message) {
-	if msg.GroupID == nil {
-		utils.Error("GroupID missing in group message")
-		return
-	}
-
-	memberIDs, _ := h.handler.GetGroupMemberIDs(*msg.GroupID)
-	for _, uid := range memberIDs {
-		if uid == msg.SenderID {
-			continue
-		}
-		lock.RLock()
-		ch, ok := userschannel[uid]
-		lock.RUnlock()
-		if ok {
-			ch <- msg
-		}
+	} else {
+		utils.Error("No strategy found for message type")
 	}
 }
