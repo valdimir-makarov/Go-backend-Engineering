@@ -1,8 +1,0 @@
-services:
-  account:
-  catalog:
-  order:
-  graphql:
-  order_db:
-  account_db:
-  catalog_db:
